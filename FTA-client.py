@@ -1,16 +1,30 @@
 import socket
 import sys
 import struct
+import crpSocket
 
 def checkArgs():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print "Invalid arguments"
-        sys.exit()
-    
-    try:
-        int(sys.argv[1]) #The port number at which the FTA-server's UDP socket should bind
-        
+        sys.exit(1)
         
 checkArgs()
 
-localUDPPort = sys.argv[1]
+# FTA-client A P
+# A: The IP address of FTA-server
+# P: The UDP port number of FTA-server
+
+clientCRPPort = 7001
+ftaServerIP = socket.inet_aton(sys.argv[1]])
+ftaServerPort = int(sys.argv[2])
+
+#Create Client socket
+sock = crpSocket.CRPSocket(clientCRPPort)
+state = 'CLOSED'
+
+
+try:
+    sock.bind(' ', clientCRPPort)
+except:
+    print "Error during binding"
+    sys.exit(1)
