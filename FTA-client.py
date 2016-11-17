@@ -250,6 +250,7 @@ sock = crpsocket.CRPSocket(serverCRPPort)
 state = 'NotConnected'
 
 # Bind to local CRP ip and port.
+# Use same port number as server
 try:
     log("Binding client CRPport: " + str(serverCRPPort))
     sock.bind(serverCRPPort)
