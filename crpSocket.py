@@ -103,13 +103,3 @@ class CRPSocket:
         
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
