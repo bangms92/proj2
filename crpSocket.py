@@ -2,6 +2,12 @@ import socket
 import crpPacket
 from crpPacket import CRPPacket
 
+DEBUG = True
+
+def log(message):
+    if DEBUG:
+        print message
+
 class CRPSocket:
     def __init__(self, sourceCRPPort):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,14 +29,17 @@ class CRPSocket:
         self.socket.bind((addr, portNum))
         
     def connect(self, ipAddress, portNum):
+        log("Client connect()")
         self.destAddr = ipAddress
         self.udpDestPort = portNum
         
         #Send REQ
         self._sendREQ()
-        self.state = 'ESTABLISHED'
+        log("REQ Packet Sent")
+        self.state = 'REQ-SENT'
         
         #Receive ACK
+        log("Waiting to receive ACK...")
         ackData, ackAddress = self.socket.recvfrom(self.receivingWindowSize)
         ackPacket = self._reconstructPacket(bytearray(ackData))
         
@@ -73,14 +82,18 @@ class CRPSocket:
         return packet
     
     def _sendREQ(self):
+        log("Creating REQ Packet")
         reqPacket = CRPPacket.getREQ(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
         
+        log("Increment Seq Num")
         self.seqNum = self.seqNum + 1 #Increment sequence number
         self.socket.sendto(reqPacket.toByteArray(), (self.destAddr, self.udpDestPort))
     
     def _sendSYNC(self):
+        log("Creating SYNC Packet")
         syncPacket = CRPPacket.getSYNC(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
         
+        log("Increment Seq Num")
         self.seqNum = self.seqNum + 1 #Increment sequence number
         self.socket.sendto(syncPacket.toByteArray(), (self.destAddr, self.udpDestPort))
         
