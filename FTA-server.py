@@ -14,34 +14,22 @@ import crpSocket
 def checkArgs():
     if len(sys.argv) != 2:
         print "Invalid arguments"
-        sys.exit()
+        sys.exit(1)
         
 # Main  
 def runServer():
     global sock
     global state
     
-    if not (state == "LISTENING" or state == "CONNECTED"):
-    	try:
-    		try:
-    			sock.listen()
-    		except Exception as e:
-    			log("Exceptino: " + str(e))
-				sys.exit(0)
-			log("Setting state to connected.\n")
-			state = "CONNECTED"
-		except Exception as e:
-			log("Connection Failed: " + str(e))
-			return
+    sock.listen()
 
+# ------------------Program Run-------------------- #
 
-
-# ---------------------------------------------------------
 checkArgs()
 
 serverCRPport = int(sys.argv[1])
 
-sock = crpSocket.CRPSocket(int(sys.argv[1]))
+sock = crpSocket.CRPSocket(sys.argv[1])
 state = 'DISCONNECTED'
 
 try:
