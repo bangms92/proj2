@@ -106,6 +106,7 @@ class CRPPacket:
         log("converting to ByteArray")
         packet = bytearray()
         packet.extend(self.__pickleHeader())
+        log("Header added to Packet")
         if self.data != 0:
             packet.extend(self.data)
             log("data added to the packet")
