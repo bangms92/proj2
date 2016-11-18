@@ -29,7 +29,7 @@ checkArgs()
 
 serverCRPport = int(sys.argv[1])
 
-sock = crpSocket.CRPSocket(sys.argv[1])
+sock = crpSocket.CRPSocket(serverCRPport)
 state = 'DISCONNECTED'
 
 try:

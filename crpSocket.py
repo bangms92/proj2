@@ -61,7 +61,7 @@ class CRPSocket:
             reqPacket = self._reconstructPacket(bytearray(reqData))
             break
         self.ackNum = reqPacket.header['seqNum'] + 1
-        self.udpDestPort = reqPacket.hear['desPor']
+        self.udpDestPort = int(reqPacket.header['desPort'])
         self.destAddr = reqAddress[0]
         self.udpDestPort = reqAddress[1]
         
@@ -69,6 +69,7 @@ class CRPSocket:
         ackPacket = CRPPacket(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, (False, True, False, False), self.receivingWindowSize)
         self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
         self.state = 'REQ-RCVD'
+        log("ACK Packet Sent")
         
         #Receive SYNC
         syncData, syncAddress = self.socket.recvfrom(self.receivingWindowSize)
