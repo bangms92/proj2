@@ -20,12 +20,12 @@ def checkArgs():
         usage()
 
 def usage():
-	print "Invalid arguments"
-    print "FTA-server Usage: \n"
-    print "FTA-server X\n"
-    print "X: port number to which FTA server's UDP socker should bind\n"
-    print "Example: FTA-server 5000"
-    sys.exit(1)
+	print "Invalid arguments\n"
+	print "FTA-server Usage: \n"
+	print "FTA-server X \n"
+	print "X: port number to which FTA server's UDP socker should bind \n"
+	print "Example: FTA-server 5000"
+	sys.exit(1)
 
 # def send_msg(socket, msg)
 # def recv_msg(socket)
