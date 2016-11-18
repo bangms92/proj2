@@ -51,10 +51,10 @@ class CRPSocket:
         self._sendSYNC()
         log("SYNC is sent")
         #Established
-        self.state = 'ESTABLISHED'
+        self.state = 'CONNECTED'
 
     def listen(self):
-        self.state = 'LISTEN'
+        self.state = 'LISTENING'
         
         #Receive REQ
         while True:
@@ -102,10 +102,180 @@ class CRPSocket:
         self.seqNum = self.seqNum + 1 #Increment sequence number
         self.socket.sendto(syncPacket.toByteArray(), (self.destAddr, self.udpDestPort))
         
+
+    def send(self, msg):
+        if self.udpSrcPort is None:
+            raise Exception("Socket not bound")
+
+        if self.state != 'ESTABLISHED':
+            raise Exception("Connection not established")
+
+        dataQueue = deque()
+        packetQueue = deque()
+        sentQueue = deque()
+        lastSeqNum = self.seqNum
+
+        #fragment data and add it to data queue
+        for i in range(stop = len(msg), step = CRPPacket.getDataLength()):
+            if (i + CRPPacket.getDataLength() > len(msg)):
+                dataQueue.append(bytearray(msg[i : ]))
+            else:
+                dataQueue.append(bytearray(msg[i : i + CRPPacket.getDataLength()]))
+
+        #construct packet queue from data queue
+        for data in dataQueue:
+            if data == dataQueue[0]:
+                flags = (False, False, False, False, True, False)
+            if data == dataQueue[-1]:
+                flags = (False, False, False, False, False, True)
+            else:
+                flags = (False, False, False, False, False, False)
+
+            packet = CRPPacket(
+                    srcPort = self.udpSrcPort,
+                    desPort = self.udpDestPort,
+                    seqNum = self.seqNum,
+                    ackNum = self.ackNum,
+                    flagList = flags,
+                    winSize = self.recvWindowSize,
+                    data = data
+                    )
+
+            self.seqNum += 1
+            if self.seqNum >= CRPPacket.maxSeqNum():
+                self.seqNum = 0
+
+            packetQueue.append(packet)
+
+        resetsLeft = self.resetLimit
+        while packetQueue and resetsLeft:
+            #send packets in send window
+            window = self.sendWindowSize
+            while window and packetQueue:
+                packetToSend = packetQueue.popLeft()
+                self.sendto(packet.toByteArray(), (self.destAddr, self.desUDPPort))
+                lastSeqNum = packet.header['seqNum']
+
+                window -= 1
+                sentQueue.append(packet)
+
+            try:
+                data, address = self.recvfrom(self.recvWindowSize)
+                handShakeFinishedCheck = self.__reconstructPacket(bytearray(data))
+                packet = self.__reconstructPacket(data = bytearray(data),  checkAckNum = lastSeqNum)
+
+                if not packet:
+                    sentQueue.reverse()
+                    packetQueue.extendleft(sentQueue)
+                    sentQueue.clear()
+                    resetsLeft -= 1
+                    continue
+
+            except socket.timeout:
+                window = 1
+                resetsLeft -= 1
+                sentQueue.reverse()
+                packetQueue.extendleft(sentQueue)
+                sentQueue.clear()
+
+            else:
+                window += 1
+                if (isinstance(packet, int)):
+                    while packet < 0:
+                        packetQueue.appendleft(sentQueue.pop())
+                        packet += 1
+                elif handShakeFinishedCheck.isAck() and handShakeFinishedCheck.header['ackNum'] == self.finalCnctAckNum:
+
+                    flags = (False, False, True, False, False, False)
+                    ackPacket = CRPPacket(
+                                srcPort = self.udpSrcPort,
+                                desPort = self.udpDestPort,
+                                seqNum = self.seqNum,
+                                ackNum = self.ackNum,
+                                flagList = flags,
+                                winSize = self.recvWindowSize,
+                                )
+                    self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+
+                    resetsLeft = self.resetLimit
+
+                    sentQueue.reverse()
+                    packetQueue.extendleft(sentQueue)
+                    sentQueue.clear()
+                elif packet.isAck():
+                    self.seqNum = packet.header['ackNum']
+                    resetsLeft = self.resetLimit
+                    sentQueue.clear()
+
+        if not resetsLeft:
+            raise Exception('socket timeout')
         
         
-        
-        
+    def recv(self):
+        if self.udpSrcPort is None:
+            log("Socket already closed")
+
+        if self.state != 'ESTABLISHED':
+            log("Socket already closed")
+
+        message = bytes()
+
+        resetsLeft = self.resetLimit
+        while resetsLeft:
+            try:
+                data, address = self.recvfrom(self.recvWindowSize)
+
+            except socket.timeout:
+                resetsLeft -= 1
+                continue
+
+            packet = self.__reconstructPacket(bytearray(data))
+
+            if not packet:
+                resetsLeft -= 1
+                continue
+
+            else:
+                self.ackNum = packet.header['seqNum'] + 1
+                if self.ackNum > RxPacket.maxAckNum():
+                    self.ackNum = 0
+                message += packet.data
+
+                flags = (False, False, True, False, False, False)
+                ackPacket = CRPPacket(
+                            srcPort = self.udpSrcPort,
+                            desPort = self.udpDestPort,
+                            seqNum = self.seqNum,
+                            ackNum = self.ackNum,
+                            flagList = flags,
+                            winSize = self.recvWindowSize,
+                            )
+                self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+
+                if (packet.isEndOfMessage()):
+                    break
+
+                if (packet.isFin()):
+                    flags = (False, False, True, False, False, False)
+                    ackPacket = RxPacket(
+                                srcPort = self.udpSrcPort,
+                                desPort = self.udpDestPort,
+                                seqNum = self.seqNum,
+                                ackNum = self.ackNum,
+                                flagList = flags,
+                                winSize = self.recvWindowSize,
+                                )
+                    self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+                    self.__closePassive(ackPacket)
+                    break
+
+                return message
+
+
+        if not resetsLeft:
+            raise Exception('Socket timeout')
+
+        return message
         
         
         

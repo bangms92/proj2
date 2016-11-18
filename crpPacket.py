@@ -56,6 +56,10 @@ class CRPPacket:
     @staticmethod
     def getHeaderLeangth():
         return HEADER_LENGTH
+
+    @staticmethod
+    def getDataLength():
+        return DATA_LEN
     
     # returns an crpPacket given a byteArray as an input
     @staticmethod

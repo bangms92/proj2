@@ -29,6 +29,38 @@ def usage():
 
 # def send_msg(socket, msg)
 # def recv_msg(socket)
+
+def send_msg(asocket, msg):
+    # Prefix each message with a 4-byte length (network byte order)
+    msg = struct.pack('>I', len(msg)) + msg
+    asocket.send(msg)
+
+def recv_msg(asocket):
+    # Read message length and unpack it into an integer
+    raw_msglen = recvall(asocket, 4)
+    if not raw_msglen:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    # Read the message data
+    return recvall(asocket, msglen)
+
+def recvall(asocket, n):
+    log("Preparing to receive " + str(n) + " bytes...\n")
+
+    # Helper function to recv n bytes or return None if EOF is hit
+    data = ''
+    recvCallsMade = 0;
+    while len(data) < n:
+        log("message length is : " + str(n) + " | "+ "data length is : " + str(len(data)))
+        packet = asocket.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+        recvCallsMade += 1
+    log("\n Calls to rcv() made: " + str(recvCallsMade) + "...\n")
+    print str(len(data)) + " bytes received.\n"
+    return data
+
 # def recvall(socket, n)
 # def window(size)
 # def handleGet(filename)
@@ -39,7 +71,32 @@ def runServer():
     global sock
     global state
     
-    sock.listen()
+
+    if not (state == "LISTENING" or state == "CONNECTED"):
+    	try:
+    		log("Attempting to listen\n")
+    		try:
+    			sock.listen()
+    		except Exception as e:
+    			log("Exception: " + str(e))
+    			sys.exit(0)
+    		log("Setting state to CONNECTED.\n")
+    		state = "CONNECTED"
+    	except Exception as e:
+    		log("Connection Failed: " + str(e))
+    		return
+    	
+	log("Waiting for message from client") 
+	message = recv_msg(sock)
+	
+	if message is None:
+		log("Client terminated")
+		state = "DISCONNECTED"
+	else:
+		log("Message received\n")
+
+    	# log(message)
+
 
 # ------------------Program Run-------------------- #
 
