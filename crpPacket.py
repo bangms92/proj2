@@ -28,7 +28,7 @@ class CRPPacket:
     MAX_ACK_NUM = int(math.pow(2, 32) - 1) #32 bits
     MAX_WINDOW_SIZE = int(math.pow(2, 16) - 1) #16 bits
     
-    HEADER_LENGTH = 16 #16 Bytes
+    HEADER_LENGTH = 20 #16 Bytes
     
     global HEADER_FIELDS
     HEADER_FIELDS = (
@@ -36,7 +36,7 @@ class CRPPacket:
                     ('desPort', uint16, 2),
                     ('seqNum', uint32, 4),
                     ('ackNum', uint32, 4),
-                    ('flagList', uint16, 4),
+                    ('flagList', uint32, 4),
                     ('winSize', uint16, 2),
                     ('checksum', uint16, 2)
                     )
@@ -67,7 +67,9 @@ class CRPPacket:
     #adds byteArray to object
     def __unpickle(self, byteArray):
         if byteArray:
+            log("HEADER_LENGTH is " + str(HEADER_LENGTH))
             headerBytes = byteArray[0 : HEADER_LENGTH]
+            log("headerBytes size: " + str(len(headerBytes)))
             self.__unpickleHeader(headerBytes)
 
             if (len(byteArray) != HEADER_LENGTH):
@@ -82,6 +84,7 @@ class CRPPacket:
         for (fieldName, dataType, size) in HEADER_FIELDS:
             # Get the bytes from byteArray, convert to int
             bytes = headerBytes[base : base + size]
+            log("base: " + str(base) + " size: " + str(size))
             value = dataType.from_buffer(bytes).value
             log("Unpicked " + fieldName + " Value is " + str(value))
             #add specific field, done differently for flags
@@ -139,7 +142,7 @@ class CRPPacket:
             value = value | (0x1 << 2)
         if flags[0] == True:
             value = value | (0x1 << 3)
-        return bytearray(uint16(value))
+        return bytearray(uint32(value))
     
     # Returns a simple REQ packet.
     @staticmethod
