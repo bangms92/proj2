@@ -33,7 +33,7 @@ sock = crpSocket.CRPSocket(sys.argv[1])
 state = 'DISCONNECTED'
 
 try:
-    sock.bind("127.0.0.1", serverCRPport)
+    sock.bind("172.17.0.3", serverCRPport)
 except Exception as e:
     print "Error: could not bind to port " + str(serverCRPport) + " on local host.\n"
     log("Exception: " + str(e))

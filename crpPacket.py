@@ -83,7 +83,7 @@ class CRPPacket:
             # Get the bytes from byteArray, convert to int
             bytes = headerBytes[base : base + size]
             value = dataType.from_buffer(bytes).value
-
+            log("Unpicked " + fieldName + " Value is " + str(value))
             #add specific field, done differently for flags
             if (fieldName == 'flags'):
                 value = self.__unpickleFlags(value)
@@ -163,7 +163,7 @@ class CRPPacket:
     def isFin(self):
         return header['flags'][0]
     
-    def __init__(self, srcPort = 0, desPort = 0, seqNum = 0, ackNum = 0, flagList = None, winSize = MAX_WINDOW_SIZE, data = None):
+    def __init__(self, srcPort = 99, desPort = 99, seqNum = 0, ackNum = 0, flagList = (False, False, False, False), winSize = MAX_WINDOW_SIZE, data = None):
         self.header = {}
 
         if srcPort:

@@ -41,7 +41,7 @@ sock = crpSocket.CRPSocket(clientCRPPort)
 state = 'DISCONNECTED'
 
 try:
-    sock.bind('127.0.0.1', clientCRPPort)
+    sock.bind('172.17.0.2', clientCRPPort)
 except Exception as e:
     print "Error during binding" + str(e)
     sys.exit(1)
