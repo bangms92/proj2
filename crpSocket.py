@@ -58,7 +58,7 @@ class CRPSocket:
         #Receive REQ
         while True:
             reqData, reqAddress = self.socket.recvfrom(self.receivingWindowSize)
-            reqPacket = self._reconstructPacket(bytearray(rcData))
+            reqPacket = self._reconstructPacket(bytearray(reqData))
             break
         self.ackNum = reqPacket.header['seqNum'] + 1
         self.udpDestPort = reqPacket.hear['desPor']
@@ -77,7 +77,7 @@ class CRPSocket:
         state = 'ESTABLISHED'
         
     def _reconstructPacket(self, data):
-        packet = CRPPocket.fromByteArray(data)
+        packet = CRPPacket.fromByteArray(data)
         #include checksum here
         return packet
     
