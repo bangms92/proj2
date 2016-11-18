@@ -43,6 +43,7 @@ class CRPSocket:
         ackData, ackAddress = self.socket.recvfrom(self.receivingWindowSize)
         ackPacket = self._reconstructPacket(bytearray(ackData))
         
+        log("self.seqNum is " + str(self.seqNum))
         if ackPacket.isAck() and ackPacket.header['ackNum'] == self.seqNum:
             print "Correct Ack recieved"
             

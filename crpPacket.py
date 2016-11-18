@@ -88,7 +88,7 @@ class CRPPacket:
             value = dataType.from_buffer(bytes).value
             log("Unpicked " + fieldName + " Value is " + str(value))
             #add specific field, done differently for flags
-            if (fieldName == 'flags'):
+            if (fieldName == 'flagList'):
                 value = self.__unpickleFlags(value)
 
             #add value to header
@@ -98,12 +98,14 @@ class CRPPacket:
             base = base + size
             
     def __unpickleFlags(self, value):
+        log("Unpickle Flags")
         # checks if each individual bit is present
-        isInit = ((value & 0x1) == 1)
-        isCnct = (((value & 0x2) >> 1) == 1)
+        isREQ = ((value & 0x1) == 1)
+        isSYNC = (((value & 0x2) >> 1) == 1)
         isAck = (((value & 0x4) >> 2) == 1)
         isFin = (((value & 0x8) >> 3) == 1)
-        return (isInit, isCnct, isAck, isFin)
+        log("REQ: " + str(isREQ) + " SYNC: " + str(isSYNC) + " ACK: " + str(isAck) + " FIN: " + str(isFin))
+        return (isREQ, isSYNC, isAck, isFin)
     
     def toByteArray(self):
         log("converting to ByteArray")
@@ -154,17 +156,17 @@ class CRPPacket:
     def getSYNC(srcPort, desPort, seqNum, ackNum, winSize):
         return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, True, False), winSize)
     
-    def isInit(self):
-        return header['flags'][3]
+    def isREQ(self):
+        return self.header['flagList'][3]
 
-    def isCnct(self):
-        return header['flags'][2]
+    def isSYNC(self):
+        return self.header['flagList'][2]
 
     def isAck(self):
-        return header['flags'][1]
+        return self.header['flagList'][1]
 
     def isFin(self):
-        return header['flags'][0]
+        return self.header['flagList'][0]
     
     def __init__(self, srcPort = 99, desPort = 99, seqNum = 0, ackNum = 0, flagList = (False, False, False, False), winSize = MAX_WINDOW_SIZE, data = None):
         self.header = {}
