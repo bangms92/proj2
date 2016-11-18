@@ -17,7 +17,6 @@ def checkArgs():
     try:
     	int(sys.argv[1])
     except:
-    	log("Invalid arguments")
         usage()
 
 def usage():
