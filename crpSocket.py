@@ -47,7 +47,7 @@ class CRPSocket:
         
         #Receive REQ
         while True:
-            reqData, reeqAddress = self.socket.recvFrom(self.receivingWindowSize)
+            reqData, reeqAddress = self.socket.recvfrom(self.receivingWindowSize)
             reqPacket = self._reconstructPacket(bytearray(rcData))
             break
         self.ackNum = reqPacket.header['seqNum'] + 1
@@ -82,16 +82,6 @@ class CRPSocket:
         
         self.seqNum = self.seqNum + 1 #Increment sequence number
         self.socket.sendto(syncPacket, (self.destAddr, self.udpDestPort))
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         
         
