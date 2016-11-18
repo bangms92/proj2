@@ -36,7 +36,7 @@ class CRPPacket:
                     ('desPort', uint16, 2),
                     ('seqNum', uint32, 4),
                     ('ackNum', uint32, 4),
-                    ('flagList', uint8, 1),
+                    ('flagList', uint16, 4),
                     ('winSize', uint16, 2),
                     ('checksum', uint16, 2)
                     )
@@ -103,14 +103,17 @@ class CRPPacket:
         return (isInit, isCnct, isAck, isFin)
     
     def toByteArray(self):
+        log("converting to ByteArray")
         packet = bytearray()
         packet.extend(self.__pickleHeader())
-        if self.data:
+        if self.data != 0:
             packet.extend(self.data)
+            log("data added to the packet")
         return packet
     
     #converts the header to a length 20 bytearray
     def __pickleHeader(self):
+        log("Packing header to the packet")
         byteArray = bytearray()
 
         for (fieldName, dataType, size) in HEADER_FIELDS:
@@ -121,7 +124,7 @@ class CRPPacket:
                 byteArray.extend(bytearray(dataType(value)))
             else:
                 byteArray.extend(self.__pickleFlags())
-
+            log("After Packet " + fieldName + " length is " + str(len(byteArray)))
         return byteArray
     
     def __pickleFlags(self):
@@ -135,7 +138,7 @@ class CRPPacket:
             value = value | (0x1 << 2)
         if flags[0] == True:
             value = value | (0x1 << 3)
-        return bytearray(uint8(value))
+        return bytearray(uint16(value))
     
     # Returns a simple REQ packet.
     @staticmethod
@@ -187,6 +190,8 @@ class CRPPacket:
 
         if data:
             self.data = bytearray(data)
+        else:
+            self.data = 0
 
         self.header['checksum'] = self._computeChecksum()
 
@@ -197,10 +202,10 @@ class CRPPacket:
         log("Converting packet to byteArray...\n")
         packet = str(self.toByteArray())
         log("Packet converted to byteArray...\n")
-
+        log("Length of the packet is " + str(len(packet)))
         sum = 0
         for i in range(0, len(packet), 2):
-
+            log(str(i) + '\n')
             #16 bit carry-around addition
             value = ord(packet[i]) + (ord(packet[i + 1]) << 8)
             temp = sum + value
