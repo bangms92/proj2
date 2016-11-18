@@ -4,7 +4,17 @@ import struct
 import ctypes
 import math
 
+DEBUG = True
+
+def log(message):
+    if DEBUG:
+        print message
+
 class CRPPacket:
+    global uint16
+    global uint32
+    global uint8
+
     uint16 = ctypes.c_uint16
     uint32 = ctypes.c_uint32
     uint8 = ctypes.c_uint8
@@ -20,12 +30,13 @@ class CRPPacket:
     
     HEADER_LENGTH = 16 #16 Bytes
     
+    global HEADER_FIELDS
     HEADER_FIELDS = (
                     ('srcPort', uint16, 2),
                     ('desPort', uint16, 2),
                     ('seqNum', uint32, 4),
                     ('ackNum', uint32, 4),
-                    ('flags', uint8, 1),
+                    ('flagList', uint8, 1),
                     ('winSize', uint16, 2),
                     ('checksum', uint16, 2)
                     )
@@ -98,16 +109,15 @@ class CRPPacket:
             packet.extend(self.data)
         return packet
     
-    
-    
     #converts the header to a length 20 bytearray
     def __pickleHeader(self):
         byteArray = bytearray()
 
         for (fieldName, dataType, size) in HEADER_FIELDS:
+            log("crpPacket __pickleHeader: fieldName " + fieldName)
             value = self.header[fieldName]
 
-            if (fieldName != 'flags'):
+            if (fieldName != 'flagList'):
                 byteArray.extend(bytearray(dataType(value)))
             else:
                 byteArray.extend(self.__pickleFlags())
@@ -116,14 +126,14 @@ class CRPPacket:
     
     def __pickleFlags(self):
         value = 0
-        flags = self.header['flags']
-        if flags[0] == True:
-            value = value | 0x1
-        if flags[1] == True:
-            value = value | (0x1 << 1)
-        if flags[2] == True:
-            value = value | (0x1 << 2)
+        flags = self.header['flagList']
         if flags[3] == True:
+            value = value | 0x1
+        if flags[2] == True:
+            value = value | (0x1 << 1)
+        if flags[1] == True:
+            value = value | (0x1 << 2)
+        if flags[0] == True:
             value = value | (0x1 << 3)
         return bytearray(uint8(value))
     
@@ -157,10 +167,14 @@ class CRPPacket:
         if desPort:
             self.header['desPort'] = desPort
 
-        if seqNum:
+        if seqNum > MAX_SEQUENCE_NUM:
+            self.header['seqNum'] = seqNum - MAX_SEQUENCE_NUM #Restart the sequence numbers??
+        else:
             self.header['seqNum'] = seqNum
 
-        if ackNum:
+        if ackNum > MAX_ACK_NUM:
+            self.header['ackNum'] = ackNum - MAX_ACK_NUM
+        else:
             self.header['ackNum'] = ackNum
 
         if flagList:
@@ -174,4 +188,22 @@ class CRPPacket:
         if data:
             self.data = bytearray(data)
 
-        self.header['checksum'] = self.__computeChecksum()
+        self.header['checksum'] = self._computeChecksum()
+
+    def _computeChecksum(self):
+        log("Computing checksum...\n")
+        self.header['checksum'] = 0
+
+        log("Converting packet to byteArray...\n")
+        packet = str(self.toByteArray())
+        log("Packet converted to byteArray...\n")
+
+        sum = 0
+        for i in range(0, len(packet), 2):
+
+            #16 bit carry-around addition
+            value = ord(packet[i]) + (ord(packet[i + 1]) << 8)
+            temp = sum + value
+            sum = (temp & 0xffff) + (temp >> 16)
+
+        return ~sum & 0xffff #16-bit one's complement
