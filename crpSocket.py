@@ -49,7 +49,7 @@ class CRPSocket:
             
         #Send SYNC
         self._sendSYNC()
-        
+        log("SYNC is sent")
         #Established
         self.state = 'ESTABLISHED'
 
@@ -73,8 +73,11 @@ class CRPSocket:
         log("ACK Packet Sent")
         
         #Receive SYNC
-        syncData, syncAddress = self.socket.recvfrom(self.receivingWindowSize)
-        syncPacket = self._reconstructPacket(bytearray(reqPacket))
+        while True:
+            syncData, syncAddress = self.socket.recvfrom(self.receivingWindowSize)
+            syncPacket = self._reconstructPacket(bytearray(syncData))
+            break
+        log("Received SYNC")
         #Established
         state = 'ESTABLISHED'
         
