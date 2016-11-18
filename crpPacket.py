@@ -46,12 +46,50 @@ class CRPPacket:
     def getHeaderLeangth():
         return HEADER_LENGTH
     
-    # returns an RxPacket given a byteArray as an input
+    # returns an crpPacket given a byteArray as an input
     @staticmethod
     def fromByteArray(byteArray):
-        p = RxPacket()
+        p = CRPPacket()
         p.__unpickle(byteArray)
         return p
+    
+    #adds byteArray to object
+    def __unpickle(self, byteArray):
+        if byteArray:
+            headerBytes = byteArray[0 : HEADER_LENGTH]
+            self.__unpickleHeader(headerBytes)
+
+            if (len(byteArray) != HEADER_LENGTH):
+                dataBytes = byteArray[HEADER_LENGTH : ]
+            else:
+                dataBytes = None
+            self.data = dataBytes
+
+    def __unpickleHeader(self, headerBytes):
+        base = 0
+        #for each header field, get values
+        for (fieldName, dataType, size) in HEADER_FIELDS:
+            # Get the bytes from byteArray, convert to int
+            bytes = headerBytes[base : base + size]
+            value = dataType.from_buffer(bytes).value
+
+            #add specific field, done differently for flags
+            if (fieldName == 'flags'):
+                value = self.__unpickleFlags(value)
+
+            #add value to header
+            self.header[fieldName] = value
+
+            # increment base
+            base = base + size
+            
+    def __unpickleFlags(self, value):
+        # checks if each individual bit is present
+        isInit = ((value & 0x1) == 1)
+        isCnct = (((value & 0x2) >> 1) == 1)
+        isAck = (((value & 0x4) >> 2) == 1)
+        isFin = (((value & 0x8) >> 3) == 1)
+        return (isInit, isCnct, isAck, isFin)
     
     def toByteArray(self):
         packet = bytearray()
@@ -59,6 +97,8 @@ class CRPPacket:
         if self.data:
             packet.extend(self.data)
         return packet
+    
+    
     
     #converts the header to a length 20 bytearray
     def __pickleHeader(self):
@@ -96,6 +136,18 @@ class CRPPacket:
     @staticmethod
     def getSYNC(srcPort, desPort, seqNum, ackNum, winSize):
         return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, True, False), winSize)
+    
+    def isInit(self):
+        return header['flags'][3]
+
+    def isCnct(self):
+        return header['flags'][2]
+
+    def isAck(self):
+        return header['flags'][1]
+
+    def isFin(self):
+        return header['flags'][0]
     
     def __init__(self, srcPort = 0, desPort = 0, seqNum = 0, ackNum = 0, flagList = None, winSize = MAX_WINDOW_SIZE, data = None):
         self.header = {}
