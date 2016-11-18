@@ -45,16 +45,57 @@ class CRPPacket:
     @staticmethod
     def getHeaderLeangth():
         return HEADER_LENGTH
-
-    # Returns a simple INIT packet.
+    
+    # returns an RxPacket given a byteArray as an input
     @staticmethod
-    def getInit(srcPort, desPort, seqNum, ackNum, winSize):
-        return CRPPacket(srcPort, desPort, seqNum, ackNum, (True, False, False, False), winSize)
+    def fromByteArray(byteArray):
+        p = RxPacket()
+        p.__unpickle(byteArray)
+        return p
+    
+    def toByteArray(self):
+        packet = bytearray()
+        packet.extend(self.__pickleHeader())
+        if self.data:
+            packet.extend(self.data)
+        return packet
+    
+    #converts the header to a length 20 bytearray
+    def __pickleHeader(self):
+        byteArray = bytearray()
 
-    # Returns a simple CNCT packet.
+        for (fieldName, dataType, size) in HEADER_FIELDS:
+            value = self.header[fieldName]
+
+            if (fieldName != 'flags'):
+                byteArray.extend(bytearray(dataType(value)))
+            else:
+                byteArray.extend(self.__pickleFlags())
+
+        return byteArray
+    
+    def __pickleFlags(self):
+        value = 0
+        flags = self.header['flags']
+        if flags[0] == True:
+            value = value | 0x1
+        if flags[1] == True:
+            value = value | (0x1 << 1)
+        if flags[2] == True:
+            value = value | (0x1 << 2)
+        if flags[3] == True:
+            value = value | (0x1 << 3)
+        return bytearray(uint8(value))
+    
+    # Returns a simple REQ packet.
     @staticmethod
-    def getCnct(srcPort, desPort, seqNum, ackNum, winSize):
-        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, True, False, False), winSize)
+    def getREQ(srcPort, desPort, seqNum, ackNum, winSize):
+        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, False, True), winSize)
+
+    # Returns a simple SYNC packet.
+    @staticmethod
+    def getSYNC(srcPort, desPort, seqNum, ackNum, winSize):
+        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, True, False), winSize)
     
     def __init__(self, srcPort = 0, desPort = 0, seqNum = 0, ackNum = 0, flagList = None, winSize = MAX_WINDOW_SIZE, data = None):
         self.header = {}

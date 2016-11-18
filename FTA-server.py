@@ -7,6 +7,12 @@ def checkArgs():
         print "Invalid arguments"
         sys.exit()
         
+        
+def listen():
+    gloabl sock
+    
+    sock.listen()
+    
 checkArgs()
 
 # FTA-server X
@@ -19,3 +25,4 @@ try:
 except:
     print "Error during binding"
     sys.exit(1)
+    
