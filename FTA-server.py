@@ -13,8 +13,27 @@ import crpSocket
 # X: The port number at which the FTA-server's UDP socket should bind
 def checkArgs():
     if len(sys.argv) != 2:
-        print "Invalid arguments"
-        sys.exit(1)
+        usage()
+    try:
+    	int(sys.argv[1])
+    except:
+    	log("Invalid arguments")
+        usage()
+
+def usage():
+	print "Invalid arguments"
+    print "FTA-server Usage: \n"
+    print "FTA-server X\n"
+    print "X: port number to which FTA server's UDP socker should bind\n"
+    print "Example: FTA-server 5000"
+    sys.exit(1)
+
+# def send_msg(socket, msg)
+# def recv_msg(socket)
+# def recvall(socket, n)
+# def window(size)
+# def handleGet(filename)
+# def handlePut(filename)
         
 # Main  
 def runServer():
