@@ -1,6 +1,6 @@
 import socket
 import crpPacket
-from crpPacket import import CRPPacket
+from crpPacket import CRPPacket
 
 class CRPSocket:
     def __init__(self, sourceCRPPort):
@@ -19,8 +19,8 @@ class CRPSocket:
         
         self.state = 'CLOSED'
         
-    def bind(self, addr):
-        self.socket.bind(addr)
+    def bind(self, addr, portNum):
+        self.socket.bind((addr, portNum))
         
     def connect(self, ipAddress, portNum):
         self.destAddr = ipAddress
@@ -75,13 +75,13 @@ class CRPSocket:
         reqPacket = CRPPacket.getREQ(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
         
         self.seqNum = self.seqNum + 1 #Increment sequence number
-        self.socket.sendto(reqPacket, (self.destAddr self.udpDestPort))
+        self.socket.sendto(reqPacket, (self.destAddr, self.udpDestPort))
     
     def _sendSYNC(self):
         syncPacket = CRPPacket.getSYNC(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
         
         self.seqNum = self.seqNum + 1 #Increment sequence number
-        self.socket.sendto(syncPacket, (self.destAddr self.udpDestPort))
+        self.socket.sendto(syncPacket, (self.destAddr, self.udpDestPort))
         
         
         

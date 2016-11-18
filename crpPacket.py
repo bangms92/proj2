@@ -7,7 +7,7 @@ import math
 class CRPPacket:
     uint16 = ctypes.c_uint16
     uint32 = ctypes.c_uint32
-    uint4 = ctypes.c_uint8
+    uint8 = ctypes.c_uint8
     
     global MAX_SEQUENCE_NUM
     global MAX_ACK_NUM
@@ -25,7 +25,7 @@ class CRPPacket:
                     ('desPort', uint16, 2),
                     ('seqNum', uint32, 4),
                     ('ackNum', uint32, 4),
-                    ('flags', c_uint8, 1),
+                    ('flags', uint8, 1),
                     ('winSize', uint16, 2),
                     ('checksum', uint16, 2)
                     )
