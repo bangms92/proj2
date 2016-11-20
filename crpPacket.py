@@ -4,7 +4,7 @@ import struct
 import ctypes
 import math
 
-DEBUG = True
+DEBUG = False
 
 def log(message):
     if DEBUG:
@@ -23,11 +23,12 @@ class CRPPacket:
     global MAX_ACK_NUM
     global MAX_WINDOW_SIZE
     global HEADER_LENGTH
+    global DATA_LEN
     
     MAX_SEQUENCE_NUM = int(math.pow(2, 32) - 1) #32 bits
     MAX_ACK_NUM = int(math.pow(2, 32) - 1) #32 bits
     MAX_WINDOW_SIZE = int(math.pow(2, 16) - 1) #16 bits
-    
+    DATA_LEN = 1004
     HEADER_LENGTH = 20 #16 Bytes
     
     global HEADER_FIELDS

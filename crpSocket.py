@@ -24,6 +24,8 @@ class CRPSocket:
         self.ackNum = 0
         
         self.state = 'CLOSED'
+
+        self.maxReset = 50
         
     def bind(self, addr, portNum):
         self.socket.bind((addr, portNum))
@@ -40,7 +42,7 @@ class CRPSocket:
         
         #Receive ACK
         log("Waiting to receive ACK...")
-        ackData, ackAddress = self.socket.recvfrom(self.receivingWindowSize)
+        ackData, ackAddress = self.recvfrom(self.receivingWindowSize)
         ackPacket = self._reconstructPacket(bytearray(ackData))
         
         log("self.seqNum is " + str(self.seqNum))
@@ -51,14 +53,15 @@ class CRPSocket:
         self._sendSYNC()
         log("SYNC is sent")
         #Established
-        self.state = 'CONNECTED'
+        self.state = 'ESTABLISHED'
 
     def listen(self):
+        log("listen()")
         self.state = 'LISTENING'
         
         #Receive REQ
         while True:
-            reqData, reqAddress = self.socket.recvfrom(self.receivingWindowSize)
+            reqData, reqAddress = self.recvfrom(self.receivingWindowSize)
             reqPacket = self._reconstructPacket(bytearray(reqData))
             break
         self.ackNum = reqPacket.header['seqNum'] + 1
@@ -73,13 +76,11 @@ class CRPSocket:
         log("ACK Packet Sent")
         
         #Receive SYNC
-        while True:
-            syncData, syncAddress = self.socket.recvfrom(self.receivingWindowSize)
-            syncPacket = self._reconstructPacket(bytearray(syncData))
-            break
+        syncData, syncAddress = self.recvfrom(self.receivingWindowSize)
+        syncPacket = self._reconstructPacket(bytearray(syncData))
         log("Received SYNC")
         #Established
-        state = 'ESTABLISHED'
+        self.state = 'ESTABLISHED'
         
     def _reconstructPacket(self, data):
         packet = CRPPacket.fromByteArray(data)
@@ -137,7 +138,7 @@ class CRPSocket:
                     seqNum = self.seqNum,
                     ackNum = self.ackNum,
                     flagList = flags,
-                    winSize = self.recvWindowSize,
+                    winSize = self.receivingWindowSize,
                     data = data
                     )
 
@@ -147,7 +148,7 @@ class CRPSocket:
 
             packetQueue.append(packet)
 
-        resetsLeft = self.resetLimit
+        resetsLeft = self.maxReset
         while packetQueue and resetsLeft:
             #send packets in send window
             window = self.sendWindowSize
@@ -160,7 +161,7 @@ class CRPSocket:
                 sentQueue.append(packet)
 
             try:
-                data, address = self.recvfrom(self.recvWindowSize)
+                data, address = self.recvfrom(self.receivingWindowSize)
                 handShakeFinishedCheck = self.__reconstructPacket(bytearray(data))
                 packet = self.__reconstructPacket(data = bytearray(data),  checkAckNum = lastSeqNum)
 
@@ -193,18 +194,18 @@ class CRPSocket:
                                 seqNum = self.seqNum,
                                 ackNum = self.ackNum,
                                 flagList = flags,
-                                winSize = self.recvWindowSize,
+                                winSize = self.receivingWindowSize,
                                 )
                     self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
 
-                    resetsLeft = self.resetLimit
+                    resetsLeft = self.maxReset
 
                     sentQueue.reverse()
                     packetQueue.extendleft(sentQueue)
                     sentQueue.clear()
                 elif packet.isAck():
                     self.seqNum = packet.header['ackNum']
-                    resetsLeft = self.resetLimit
+                    resetsLeft = self.maxReset
                     sentQueue.clear()
 
         if not resetsLeft:
@@ -212,27 +213,28 @@ class CRPSocket:
         
         
     def recv(self):
+        log("source port is " + str(self.udpSrcPort))
         if self.udpSrcPort is None:
             log("Socket already closed")
-
+        log("state: " + self.state)
         if self.state != 'ESTABLISHED':
             log("Socket already closed")
 
         message = bytes()
 
-        resetsLeft = self.resetLimit
-        while resetsLeft:
+        redoLeft = self.maxReset
+        while redoLeft:
             try:
-                data, address = self.recvfrom(self.recvWindowSize)
+                data, address = self.recvfrom(self.receivingWindowSize)
 
             except socket.timeout:
-                resetsLeft -= 1
+                redoLeft -= 1
                 continue
 
             packet = self.__reconstructPacket(bytearray(data))
 
             if not packet:
-                resetsLeft -= 1
+                redoLeft -= 1
                 continue
 
             else:
@@ -248,7 +250,7 @@ class CRPSocket:
                             seqNum = self.seqNum,
                             ackNum = self.ackNum,
                             flagList = flags,
-                            winSize = self.recvWindowSize,
+                            winSize = self.receivingWindowSize,
                             )
                 self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
 
@@ -263,7 +265,7 @@ class CRPSocket:
                                 seqNum = self.seqNum,
                                 ackNum = self.ackNum,
                                 flagList = flags,
-                                winSize = self.recvWindowSize,
+                                winSize = self.receivingWindowSize,
                                 )
                     self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
                     self.__closePassive(ackPacket)
@@ -272,11 +274,24 @@ class CRPSocket:
                 return message
 
 
-        if not resetsLeft:
+        if not redoLeft:
             raise Exception('Socket timeout')
 
         return message
         
+    def recvfrom(self, recvWindow):
+        while True:
+            log("Trying to recieve")
+            try:
+                packet = self.socket.recvfrom(recvWindow)
+                log("Recied message from " + str(packet[1]) + "\n")
+            except socket.error as error:
+                if error.errno is 35:
+                    continue
+                else:
+                    raise e
+            log("Returning recvfrom packet")
+            return packet
         
         
         

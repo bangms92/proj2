@@ -52,7 +52,7 @@ def recvall(asocket, n):
     recvCallsMade = 0;
     while len(data) < n:
         log("message length is : " + str(n) + " | "+ "data length is : " + str(len(data)))
-        packet = asocket.recv(n - len(data))
+        packet = asocket.recv()
         if not packet:
             return None
         data += packet
