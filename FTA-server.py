@@ -32,7 +32,7 @@ def usage():
 
 def send_msg(asocket, msg):
     # Prefix each message with a 4-byte length (network byte order)
-    msg = struct.pack('>I', len(msg)) + msg
+    #msg = struct.pack('>I', len(msg)) + msg
     asocket.send(msg)
 
 def recv_msg(asocket):
@@ -95,8 +95,29 @@ def runServer():
 		state = "DISCONNECTED"
 	else:
 		log("Message received\n")
+        command = message.split(' ', 1)[0]
+        filename = message.split(' ', 1)[1]
+        log(command)
+        log(filename)
+        if command == 'GET':
+            get(filename)
 
-    	log(message)
+def get(filename):
+    try:
+        log("Attemping to send " + filename + "...\n")
+        with open(filename, "rb") as afile:
+        # File is open. Send as bytestream.
+            toSend = afile.read()
+            bytesToSend = bytearray(toSend)
+            log("Sending file to client...\n")
+            send_msg(sock, bytesToSend)
+            log("File sent")
+    except IOError as e:
+        # File doe snot exist. Send error message.
+        eMessage = "ERROR : File does not exist."
+        log("Exception: " + str(e) + "...\n")
+        log("Sending error message to cleint...\n")
+        send_msg(sock, eMessage)
 
 
 # ------------------Program Run-------------------- #

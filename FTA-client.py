@@ -15,16 +15,21 @@ def checkArgs():
         sys.exit(1)
 
 def get(filename):
-    getRequest = "GET " + filename
+    getRequest = 'GET ' + filename
 
     #Send file request message
     send_msg(sock, getRequest)
     log("get " + filename + ". Request sent")
 
+    receivedFilePacket = recv_msg(sock)
+
+    if receivedFilePacket != None:
+        log("Recevied File contet: " + receivedFilePacket)
+
 
 def send_msg(asocket, msg):
     # Prefix each message with a 4-byte length (network byte order)
-    msg = struct.pack('>I', len(msg)) + msg
+    #msg = struct.pack('>I', len(msg)) + msg
     asocket.send(msg)
 
 def recv_msg(asocket):
@@ -32,9 +37,9 @@ def recv_msg(asocket):
     raw_msglen = recvall(asocket, 4)
     if not raw_msglen:
         return None
-    msglen = struct.unpack('>I', raw_msglen)[0]
+    #msglen = struct.unpack('>I', raw_msglen)[0]
     # Read the message data
-    return recvall(asocket, msglen)
+    return raw_msglen
 
 def recvall(asocket, n):
     log("Preparing to receive " + str(n) + " bytes...\n")
