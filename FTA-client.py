@@ -24,9 +24,50 @@ def get(filename):
     receivedFilePacket = recv_msg(sock)
 
     if receivedFilePacket != None:
-        log("Recevied File contet: " + receivedFilePacket)
+        log("Recevied File contet: " + str(receivedFilePacket.data))
+    ##
+    newFileName = 'received file ' + filename
+    try:
+        with file(newFileName, "wb") as afile:
+        # File is open. Send as bytestream.
+            afile.write(receivedFilePacket.data)
+    except IOError as e:
+        # File doe snot exist. Send error message.
+        eMessage = "ERROR : File does not exist."
+        log("Exception: " + str(e) + "...\n")
+        log("Sending error message to cleint...\n")
+        send_msg(sock, bytearray(eMessage))
+    ##
 
+def post(filename):
+    postRequest = 'POST ' + filename
 
+    send_msg(sock, postRequest)
+    log("POST request sent")
+    response = recv_msg(sock)
+    if (response.data == "ACCEPTED"):
+        log("Received accepted message. Sending file")
+        try:
+            log("Attempting to open file " + filename + "...\n")
+            with open(filename, "rb") as afile:
+            # File is open. Send as bytestream.
+                log("File opened - now attempting to read it in.\n")
+                toSend = afile.read()
+                bytesToSend = bytearray(toSend)
+                log("File imported as byteArray...\n")
+                log("Sending file to server...\n")
+                send_msg(sock, bytesToSend)
+                print "File sent!"
+        except IOError as e:
+            # File does not exist. Send error message.
+            eMessage = "ERROR : File does not exist."
+            log("Exception: " + str(e) + "...\n")
+
+        # Make sure server got the file
+        completeMessage = recv_msg(sock)
+        log("Complete Message received")
+        if str(completeMessage.data) == "COMPLETE":
+            log("File upload complete")
 def send_msg(asocket, msg):
     # Prefix each message with a 4-byte length (network byte order)
     #msg = struct.pack('>I', len(msg)) + msg
@@ -34,6 +75,7 @@ def send_msg(asocket, msg):
 
 def recv_msg(asocket):
     # Read message length and unpack it into an integer
+    # this is packet structure
     raw_msglen = recvall(asocket, 4)
     if not raw_msglen:
         return None
@@ -52,11 +94,11 @@ def recvall(asocket, n):
         packet = asocket.recv()
         if not packet:
             return None
-        data += packet
+        data += packet.data
         recvCallsMade += 1
     log("\n Calls to rcv() made: " + str(recvCallsMade) + "...\n")
     print str(len(data)) + " bytes received.\n"
-    return data
+    return packet
 
 def connect():
     log("Client: Connect()\n")
@@ -67,7 +109,6 @@ def connect():
         print "Already Connected"
         log("sending message...")
         #send_msg(sock, "test")
-    
     else:
         sock.connect(ftaServerIP, ftaServerPort)
         state = 'CONNECTED'
@@ -86,6 +127,14 @@ def runClient():
                 get(splitInput[1])
         else:
             print("Invalid command")
+    elif splitInput[0] == 'post':
+        if len(splitInput) == 2:
+            if state == 'DISCONNECTED':
+                print ("You are not connected\n")
+            elif state == 'CONNECTED':
+                post(splitInput[1])
+        else:
+            print("Invalid command")
 
 checkArgs()
 
@@ -102,7 +151,7 @@ sock = crpSocket.CRPSocket(clientCRPPort)
 state = 'DISCONNECTED'
 
 try:
-    sock.bind('172.17.0.2', clientCRPPort)
+    sock.bind('172.17.0.3', clientCRPPort)
 except Exception as e:
     print "Error during binding" + str(e)
     sys.exit(1)

@@ -222,7 +222,7 @@ class CRPSocket:
         if not resetsLeft:
             raise Exception('socket timeout')
         
-        
+    # Returns the packet that was received in packet structure
     def recv(self):
         log("recv() entered")
         if self.udpSrcPort is None:
@@ -254,7 +254,7 @@ class CRPSocket:
                     self.ackNum = 0
 
                 log("Data received: " + str(packet.data))
-                message += str(packet.data)
+                message += packet.data
 
                 flags = (False, True, False, False)
                 ackPacket = CRPPacket(
@@ -284,13 +284,13 @@ class CRPSocket:
                     self.__closePassive(ackPacket)
                     break
 
-                return message
-
+                #return message
+                return packet
 
         if not redoLeft:
             raise Exception('Socket timeout')
 
-        return message
+        return packet
         
     def recvfrom(self, recvWindow):
         while True:
