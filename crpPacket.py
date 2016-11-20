@@ -118,8 +118,9 @@ class CRPPacket:
         packet.extend(self.__pickleHeader())
         log("Header added to Packet")
         if self.data != 0:
-            packet.extend(self.data)
-            log("data added to the packet")
+            if self.data != None:
+                packet.extend(self.data)
+                log("data added to the packet")
         return packet
     
     #converts the header to a length 20 bytearray

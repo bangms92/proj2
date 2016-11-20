@@ -15,8 +15,12 @@ def checkArgs():
         sys.exit(1)
 
 def get(filename):
-    log("get " + filename)
     getRequest = "GET " + filename
+
+    #Send file request message
+    send_msg(sock, getRequest)
+    log("get " + filename + ". Request sent")
+
 
 def send_msg(asocket, msg):
     # Prefix each message with a 4-byte length (network byte order)
@@ -63,6 +67,21 @@ def connect():
         sock.connect(ftaServerIP, ftaServerPort)
         state = 'CONNECTED'
         
+def runClient():
+    userInput = raw_input('\n\nEnter a command:\n')
+    splitInput = userInput.split(' ', 1)
+
+    if splitInput[0] == 'connect':
+        connect()
+    elif splitInput[0] == 'get':
+        if len(splitInput) == 2:
+            if state == 'DISCONNECTED':
+                print ("You are not connected\n")
+            elif state == 'CONNECTED':
+                get(splitInput[1])
+        else:
+            print("Invalid command")
+
 checkArgs()
 
 # FTA-client A P
@@ -83,4 +102,5 @@ except Exception as e:
     print "Error during binding" + str(e)
     sys.exit(1)
 
-connect()
+while True:
+    runClient()

@@ -88,7 +88,7 @@ def runServer():
     	
 	log("Waiting for message from client") 
 	message = recv_msg(sock)
-	
+	log("Message: " + str(message))
 	if message is None:
 		log("Client terminated")
 		state = "DISCONNECTED"
