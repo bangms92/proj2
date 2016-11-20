@@ -71,7 +71,8 @@ def recvall(asocket, n):
 def runServer():
     global sock
     global state
-    
+
+    log("Top of the server, state: " + state)
 
     if not (state == "LISTENING" or state == "CONNECTED"):
     	try:
@@ -117,7 +118,7 @@ def get(filename):
         eMessage = "ERROR : File does not exist."
         log("Exception: " + str(e) + "...\n")
         log("Sending error message to cleint...\n")
-        send_msg(sock, eMessage)
+        send_msg(sock, bytearray(eMessage))
 
 
 # ------------------Program Run-------------------- #

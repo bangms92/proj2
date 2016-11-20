@@ -121,6 +121,13 @@ class CRPPacket:
             if self.data != None:
                 packet.extend(self.data)
                 log("data added to the packet")
+        while True:
+            if (len(packet) % 2 != 0):
+                log("Packet extended to keep it even")
+                packet.extend(' ')
+            else:
+                log("Packet is even")
+                break
         return packet
     
     #converts the header to a length 20 bytearray
