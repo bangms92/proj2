@@ -40,9 +40,10 @@ def recv_msg(asocket):
     raw_msglen = recvall(asocket, 4)
     if not raw_msglen:
         return None
-    msglen = struct.unpack('>I', raw_msglen)[0]
+    #msglen = struct.unpack('>I', raw_msglen)[0]
     # Read the message data
-    return recvall(asocket, msglen)
+    #return recvall(asocket, msglen)
+    return raw_msglen
 
 def recvall(asocket, n):
     log("Preparing to receive " + str(n) + " bytes...\n")
@@ -95,7 +96,7 @@ def runServer():
 	else:
 		log("Message received\n")
 
-    	# log(message)
+    	log(message)
 
 
 # ------------------Program Run-------------------- #
