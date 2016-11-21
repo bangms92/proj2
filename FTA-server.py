@@ -135,14 +135,12 @@ def handleGet(filename):
 		log("Attemping to send " + filename + "...\n")
 		with file(filename.strip(), "rb") as afile:
 		# File is open. Send as bytestream.
-			addByte = afile.read(1)
-			bytesToSend = bytearray()
-			while addByte != "":
-				log("adding " + str(addByte))
-				bytesToSend.extend(addByte)
-				addByte = afile.read(1)
-			log("Sending file to client...\n")
+			log("File opened - now attempting to read it in.\n")
+			toSend = afile.read()
+			bytesToSend = bytearray(toSend)
+			log("File imported as byteArray...\n")
 			send_msg(sock, bytesToSend)
+			log("Sending file to client...\n")
 			log("File sent")
 	except IOError as e:
 		# File doe snot exist. Send error message.

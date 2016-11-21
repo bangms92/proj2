@@ -133,13 +133,17 @@ class CRPSocket:
                 dataQueue.append(bytearray(msg[i : i + CRPPacket.getDataLength()]))
 
         #construct packet queue from data queue
+        log("Queue size: " + str(len(dataQueue)))
+        count = 0
         for data in dataQueue:
         #    if data == dataQueue[0]:
         #        flags = (False, False, False, False, True, False)
         #    if data == dataQueue[-1]:
         #        flags = (False, False, False, False, False, True)
         #    else:
-            log("Data in dataQueue: " + str(data))
+            #log("Data in dataQueue: " + str(data))
+            log("data # " + str(count))
+            count = count + 1
             flags = (False, False, False, False)
 
             packet = CRPPacket(
@@ -157,7 +161,7 @@ class CRPSocket:
                 self.seqNum = 0
 
             packetQueue.append(packet)
-
+        log("packetQueue size " + str(len(packetQueue)))
         resetsLeft = self.maxReset
         while packetQueue and resetsLeft:
             #send packets in send window
@@ -165,11 +169,11 @@ class CRPSocket:
             while window and packetQueue:
                 packetToSend = packetQueue.popleft()
                 log("Sending message: " + str(packet.data))
-                self.socket.sendto(packet.toByteArray(), (self.destAddr, self.udpDestPort))
-                lastSeqNum = packet.header['seqNum']
+                self.socket.sendto(packetToSend.toByteArray(), (self.destAddr, self.udpDestPort))
+                lastSeqNum = packetToSend.header['seqNum']
 
                 window -= 1
-                sentQueue.append(packet)
+                sentQueue.append(packetToSend)
 
             try:
                 data, address = self.recvfrom(self.receivingWindowSize)
