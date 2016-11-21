@@ -45,7 +45,7 @@ def post(filename):
     send_msg(sock, postRequest)
     log("POST request sent")
     response = recv_msg(sock)
-    if (response.data == "ACCEPTED"):
+    if (str(response) == "ACCEPTED"):
         log("Received accepted message. Sending file")
         try:
             log("Attempting to open file " + filename + "...\n")
@@ -66,7 +66,7 @@ def post(filename):
         # Make sure server got the file
         completeMessage = recv_msg(sock)
         log("Complete Message received")
-        if str(completeMessage.data) == "COMPLETE":
+        if str(completeMessage) == "COMPLETE":
             log("File upload complete")
 def send_msg(asocket, msg):
     # Prefix each message with a 4-byte length (network byte order)

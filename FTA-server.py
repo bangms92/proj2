@@ -120,7 +120,7 @@ def handlePost(filename):
 	try:	
 		with file(newFileName, "wb") as afile:
 		# File is open. Send as bytestream.
-			afile.write(receivedFilePacket.data)
+			afile.write(receivedFilePacket)
 	except IOError as e:
 		# File doe snot exist. Send error message.
 		eMessage = "ERROR : File does not exist."
