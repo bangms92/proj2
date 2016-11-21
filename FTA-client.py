@@ -21,16 +21,16 @@ def get(filename):
     send_msg(sock, getRequest)
     log("get " + filename + ". Request sent")
 
-    receivedFilePacket = recv_msg(sock)
+    receivedFile = recv_msg(sock)
 
-    if receivedFilePacket != None:
-        log("Recevied File contet: " + str(receivedFilePacket.data))
+    if receivedFile != None:
+        log("Recevied File contet: " + str(receivedFile))
     ##
     newFileName = 'received file ' + filename
     try:
         with file(newFileName, "wb") as afile:
         # File is open. Send as bytestream.
-            afile.write(receivedFilePacket.data)
+            afile.write(receivedFile)
     except IOError as e:
         # File doe snot exist. Send error message.
         eMessage = "ERROR : File does not exist."
@@ -89,16 +89,23 @@ def recvall(asocket, n):
     # Helper function to recv n bytes or return None if EOF is hit
     data = ''
     recvCallsMade = 0;
+    """
     while len(data) < n:
         log("message length is : " + str(n) + " | "+ "data length is : " + str(len(data)))
         packet = asocket.recv()
         if not packet:
             return None
-        data += packet.data
+        data += packet
         recvCallsMade += 1
+    """
+
+    packet = asocket.recv()
+    if not packet:
+        return None
+    data += packet
     log("\n Calls to rcv() made: " + str(recvCallsMade) + "...\n")
     print str(len(data)) + " bytes received.\n"
-    return packet
+    return data
 
 def connect():
     log("Client: Connect()\n")

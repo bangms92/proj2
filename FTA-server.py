@@ -57,11 +57,11 @@ def recvall(asocket, n):
 		packet = asocket.recv()
 		if not packet:
 			return None
-		data += packet.data
+		data += packet
 		recvCallsMade += 1
 	log("\n Calls to rcv() made: " + str(recvCallsMade) + "...\n")
 	print str(len(data)) + " bytes received.\n"
-	return packet
+	return data
 
 # def recvall(socket, n)
 # def window(size)
@@ -89,15 +89,15 @@ def runServer():
 			return
 
 	log("Waiting for message from client") 
-	messagePacket = recv_msg(sock)
-	log("Message: " + str(messagePacket.data))
-	if messagePacket is None:
+	message = recv_msg(sock)
+	log("Message: " + str(message))
+	if message is None:
 		log("Client terminated")
 		state = "DISCONNECTED"
 	else:
 		log("Message received\n")
-		command = str(messagePacket.data).split(' ', 1)[0]
-		filename = str(messagePacket.data).split(' ', 1)[1]
+		command = str(message).split(' ', 1)[0]
+		filename = str(message).split(' ', 1)[1]
 		log("Command: " + command)
 		log("Command: " + filename)
 		if command == 'GET':

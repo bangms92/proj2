@@ -109,8 +109,10 @@ class CRPPacket:
         isSYNC = (((value & 0x2) >> 1) == 1)
         isAck = (((value & 0x4) >> 2) == 1)
         isFin = (((value & 0x8) >> 3) == 1)
-        log("REQ: " + str(isREQ) + " SYNC: " + str(isSYNC) + " ACK: " + str(isAck) + " FIN: " + str(isFin))
-        return (isREQ, isSYNC, isAck, isFin)
+        isLast = (((value & 0x16) >> 4) == 1)
+        log("REQ: " + str(isREQ) + " SYNC: " + str(isSYNC) + " ACK: " + str(isAck) + " FIN: " + str(isFin) + " isLast: " + str(isLast))
+        #return (isREQ, isSYNC, isAck, isFin, isLast)
+        return (isLast, isFin, isAck, isSYNC, isREQ)
     
     def toByteArray(self):
         log("converting to ByteArray")
@@ -149,39 +151,44 @@ class CRPPacket:
     def __pickleFlags(self):
         value = 0
         flags = self.header['flagList']
-        if flags[3] == True:
+        if flags[4] == True:
             value = value | 0x1
-        if flags[2] == True:
+        if flags[3] == True:
             value = value | (0x1 << 1)
-        if flags[1] == True:
+        if flags[2] == True:
             value = value | (0x1 << 2)
-        if flags[0] == True:
+        if flags[1] == True:
             value = value | (0x1 << 3)
+        if flags[0] == True:
+            value = value | (0x1 << 4)
         return bytearray(uint32(value))
     
     # Returns a simple REQ packet.
     @staticmethod
     def getREQ(srcPort, desPort, seqNum, ackNum, winSize):
-        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, False, True), winSize)
+        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, False, False, True), winSize)
 
     # Returns a simple SYNC packet.
     @staticmethod
     def getSYNC(srcPort, desPort, seqNum, ackNum, winSize):
-        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, True, False), winSize)
+        return CRPPacket(srcPort, desPort, seqNum, ackNum, (False, False, False, True, False), winSize)
     
     def isREQ(self):
-        return self.header['flagList'][3]
+        return self.header['flagList'][4]
 
     def isSYNC(self):
-        return self.header['flagList'][2]
+        return self.header['flagList'][3]
 
     def isAck(self):
-        return self.header['flagList'][1]
+        return self.header['flagList'][2]
 
     def isFin(self):
+        return self.header['flagList'][1]
+
+    def isLastPacket(self):
         return self.header['flagList'][0]
     
-    def __init__(self, srcPort = 99, desPort = 99, seqNum = 0, ackNum = 0, flagList = (False, False, False, False), winSize = MAX_WINDOW_SIZE, data = None):
+    def __init__(self, srcPort = 99, desPort = 99, seqNum = 0, ackNum = 0, flagList = (False, False, False, False, False), winSize = MAX_WINDOW_SIZE, data = None):
         self.header = {}
 
         if srcPort:
