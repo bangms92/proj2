@@ -91,6 +91,7 @@ class CRPSocket:
 			ackMismatch = (int(packetAckNum) - checkAckNum - 1)
 
 			if packetAckNum and ackMismatch:
+				log("ack mismatch")
 				return ackMismatch
 		return packet
 	
@@ -125,6 +126,7 @@ class CRPSocket:
 		lastSeqNum = self.seqNum
 
 		#fragment data and add it to data queue
+		log("Trying to send message length " + str(len(msg)))
 		for i in range(0, len(msg), CRPPacket.getDataLength()):
 			log("i = " + str(i))
 			if (i + CRPPacket.getDataLength() > len(msg)):
@@ -256,6 +258,7 @@ class CRPSocket:
 			packet = self._reconstructPacket(bytearray(data))
 			log("packet reconstructed")
 			log("Flag List: " + str(packet.header['flagList']) + "\n")
+			log("Sequence Number " + str(packet.header['seqNum']))
 			if not packet:
 				redoLeft -= 1
 				continue
