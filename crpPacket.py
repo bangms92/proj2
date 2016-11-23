@@ -110,7 +110,7 @@ class CRPPacket:
         isAck = (((value & 0x4) >> 2) == 1)
         isFin = (((value & 0x8) >> 3) == 1)
         isLast = (((value & 0x16) >> 4) == 1)
-        log("REQ: " + str(isREQ) + " SYNC: " + str(isSYNC) + " ACK: " + str(isAck) + " FIN: " + str(isFin) + " isLast: " + str(isLast))
+        log("REQ: " + str(isREQ) + " SYNC: " + str(isSYNC) + " ACK: " + str(isAck) + " FIN: " + str(isFin) + " isLast: " + str(isLast) + " isSent: " )
         #return (isREQ, isSYNC, isAck, isFin, isLast)
         return (isLast, isFin, isAck, isSYNC, isREQ)
     
