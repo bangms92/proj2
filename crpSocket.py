@@ -45,6 +45,8 @@ class CRPSocket:
 		self.udpDestPort = portNum
 		
 		#Send REQ
+
+
 		log("Creating REQ Packet")
 		reqPacket = CRPPacket.getREQ(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
 		
@@ -264,8 +266,8 @@ class CRPSocket:
 					log("Something wrong with ACK packet received")
 					#for pack in windowQueue:
 						#Send the packet
-					#	self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
-					#	log("Packet sent, seqNum: " + str(pack.header['seqNum']))
+					#   self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
+					#   log("Packet sent, seqNum: " + str(pack.header['seqNum']))
 					break
 				if packet:
 					log("Successfully received uncorrupted ACK Package")
@@ -338,6 +340,20 @@ class CRPSocket:
 					isLast = True
 					break
 
+				if (packet.isFin()):
+					log("Finish Packet received")
+					flags = (False, False, True, False, False)
+					ackPacket = CRPPacket(
+								srcPort = self.udpSrcPort,
+								desPort = self.udpDestPort,
+								seqNum = self.seqNum,
+								ackNum = self.ackNum,
+								flagList = flags,
+								winSize = self.receivingWindowSize,
+								)
+					self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+					break
+
 			#log("Data received: " + str(packet.data))
 			if (firstReceving == False and justSendAck == True) or packet != None and packet.data != None:
 				if justSendAck:
@@ -372,13 +388,39 @@ class CRPSocket:
 					raise error
 			return packet
 		
-		
-		
-		
-		
-		
-		
-		
+	def close(self):
+		log("CLOSING REQUESTED")
+		log("creating FIN Packet")
+		fin_flags = (False, True, False, False, False)
+		finPacket = CRPPacket(srcPort = self.udpSrcPort, desPort = self.udpDestPort,
+					seqNum = self.seqNum, ackNum = self.ackNum, flagList = fin_flags, winSize = self.receivingWindowSize,
+					)
+		self.seqNum += 1
+		self.socket.sendto(finPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+		log("FIN packet Sent")
+
+		timeoutCount = 0
+		log("waiting to receive ACK..")
+		while True:
+			try:
+				ackData, ackAddress = self.recvfrom(self.receivingWindowSize)
+				ackPacket = self._reconstructPacket(bytearray(ackData), self.ackNum)
+			except:
+				log("Timed out, listening again for ACK in connect()")
+				timeoutCount += 1
+
+				if timeoutCount >= 3:
+					log("Send FIN again")
+					self.socket.sendto(finPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+					log("FIN Packet Sent")
+					timeoutCount = 0
+				continue
+			if ackPacket != None:
+				self.ackNum = ackPacket.header['seqNum'] + 1
+				break;
+		self.socket.close()
+		self.state = 'CLOSED'
+	
 		
 		
 		

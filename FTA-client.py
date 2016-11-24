@@ -111,7 +111,22 @@ def connect():
     else:
         sock.connect(ftaServerIP, ftaServerPort)
         state = 'CONNECTED'
-        
+
+def disconnect():
+    global sock
+    global state
+
+    if sock is None:
+        print "No connection\n"
+        return
+    if state == 'CONNECTED':
+            # Tell server we're about to disconnect.
+            send_msg(sock, "DISCONNECTING")
+            sock.close()
+            state = 'DISCONNECTED'
+            print "Terminating...Thank you"
+            sys.exit(0)
+
 def runClient():
     userInput = raw_input('\n\nEnter a command:\n')
     splitInput = userInput.split(' ', 1)
@@ -140,6 +155,9 @@ def runClient():
                 print ("You are not connected\n")
             elif state == 'CONNECTED':
                 window(int(splitInput[1]))
+    elif splitInput[0] == 'disconnect':
+        print "Client request for disconnect"
+        disconnect()
 
 checkArgs()
 

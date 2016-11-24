@@ -85,6 +85,9 @@ def runServer():
 		if command == 'POST':
 			log("POST request received")
 			handlePost(filename)
+		if command == 'terminate'
+			log("Exiting, Thank you!")
+			sys.exit(0)
 
 def handlePost(filename):
 	log("Sending ACCEPTED message to the client")
