@@ -12,8 +12,10 @@ def log(message):
 class CRPSocket:
 	def __init__(self, sourceCRPPort):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.socket.settimeout(1)
 		self.receivingWindowSize = CRPPacket.maxWindowSize()
-		self.sendWindowSize = 20
+		self.sendWindowSize = 6
 		
 		self.destAddr = None
 		self.srcAddr = None
@@ -37,21 +39,48 @@ class CRPSocket:
 		self.udpDestPort = portNum
 		
 		#Send REQ
-		self._sendREQ()
+		log("Creating REQ Packet")
+		reqPacket = CRPPacket.getREQ(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
+		
+		self.seqNum = self.seqNum + 1 #Increment sequence number
+		self.socket.sendto(reqPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+
 		log("REQ Packet Sent")
 		self.state = 'REQ-SENT'
 		
+		timeoutCount = 0
 		#Receive ACK
 		log("Waiting to receive ACK...")
-		ackData, ackAddress = self.recvfrom(self.receivingWindowSize)
-		ackPacket = self._reconstructPacket(bytearray(ackData))
-		
+		while True:
+			try:
+				ackData, ackAddress = self.recvfrom(self.receivingWindowSize)
+				ackPacket = self._reconstructPacket(bytearray(ackData), self.ackNum)
+			except:
+				log("Timed out, listening again for ACK in connect()")
+				timeoutCount += 1
+
+				if timeoutCount >= 3:
+					log("Send REQ again")
+					self.socket.sendto(reqPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+					log("REQ Packet Sent")
+					timeoutCount = 0
+
+				continue
+			if ackPacket != None:
+				self.ackNum = ackPacket.header['seqNum'] + 1
+				break;
+			
 		log("self.seqNum is " + str(self.seqNum))
 		if ackPacket.isAck() and ackPacket.header['ackNum'] == self.seqNum:
 			print "Correct Ack recieved"
 			
 		#Send SYNC
-		self._sendSYNC()
+		log("Creating SYNC Packet")
+		syncPacket = CRPPacket.getSYNC(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
+		
+		log("Increment Seq Num")
+		self.seqNum = self.seqNum + 1 #Increment sequence number
+		self.socket.sendto(syncPacket.toByteArray(), (self.destAddr, self.udpDestPort))
 		log("SYNC is sent")
 		#Established
 		self.state = 'ESTABLISHED'
@@ -62,54 +91,76 @@ class CRPSocket:
 		
 		#Receive REQ
 		while True:
-			reqData, reqAddress = self.recvfrom(self.receivingWindowSize)
-			reqPacket = self._reconstructPacket(bytearray(reqData))
-			break
+			try:
+				reqData, reqAddress = self.recvfrom(self.receivingWindowSize)
+				reqPacket = self._reconstructPacket(bytearray(reqData), self.ackNum)
+			except:
+				log("Most likely Timed out")
+				continue
+			if reqPacket != None:
+				log("Received REQ")
+				self.ackNum = reqPacket.header['seqNum'] + 1
+				break
+
 		self.udpDestPort = int(reqPacket.header['desPort'])
 		self.destAddr = reqAddress[0]
 		self.udpDestPort = reqAddress[1]
 		
+		log("Sending back ACK")
 		#Send ACK
 		ackPacket = CRPPacket(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, (False, False, True, False, False), self.receivingWindowSize)
 		self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+		self.seqNum = self.seqNum + 1 #Increment sequence number
 		self.state = 'REQ-RCVD'
 		log("ACK Packet Sent")
 		
+		timeoutCount = 0
 		#Receive SYNC
-		syncData, syncAddress = self.recvfrom(self.receivingWindowSize)
-		syncPacket = self._reconstructPacket(bytearray(syncData))
-		log("Received SYNC")
+		while True:
+			try:
+				syncData, syncAddress = self.recvfrom(self.receivingWindowSize)
+				syncPacket = self._reconstructPacket(bytearray(syncData), self.ackNum)
+			except:
+				log("Most likely Timed out")
+				timeoutCount += 1
+				if timeoutCount >= 3:
+					log("Send ACK again")
+					self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
+					log("ACK Packet Sent")
+					timeoutCount = 0
+				continue
+			if syncPacket != None:
+				log("Received SYNC")
+				self.ackNum = syncPacket.header['seqNum'] + 1
+				break
+			
+		log("Connection Established")
 		#Established
 		self.state = 'ESTABLISHED'
 		
 	def _reconstructPacket(self, data, checkAckNum = False):
 		packet = CRPPacket.fromByteArray(data)
+
 		#include checksum here
 		if checkAckNum:
+			#Check for checksum
+			givenChecksum = packet.header['checksum']
+			calculatedChecksum = packet._computeChecksum()
+
+			log("Given Check Sum: " + str(givenChecksum))
+			log("calculatedChecksum: " + str(calculatedChecksum))
+
+			if givenChecksum != calculatedChecksum:
+				log("#### corrupted packet ####")
+				return None
+
 			packetAckNum = packet.header['seqNum']
 			log("Comparing seqNum: " + str(packetAckNum) + " with " + str(checkAckNum))
 
 			if packetAckNum != checkAckNum:
-				log("ack mismatch")
+				log("#### ack mismatch ####")
 				return None
 		return packet
-	
-	def _sendREQ(self):
-		log("Creating REQ Packet")
-		reqPacket = CRPPacket.getREQ(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
-		
-		log("Increment Seq Num")
-		#self.seqNum = self.seqNum + 1 #Increment sequence number
-		self.socket.sendto(reqPacket.toByteArray(), (self.destAddr, self.udpDestPort))
-	
-	def _sendSYNC(self):
-		log("Creating SYNC Packet")
-		syncPacket = CRPPacket.getSYNC(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
-		
-		log("Increment Seq Num")
-		#self.seqNum = self.seqNum + 1 #Increment sequence number
-		self.socket.sendto(syncPacket.toByteArray(), (self.destAddr, self.udpDestPort))
-		
 
 	def send(self, msg):
 		if len(msg) < 100:
@@ -193,93 +244,50 @@ class CRPSocket:
 				sentQueue.append(pack)
 				nextSeqNum = self.seqNum + 1
 
+			correctlyReceivedAck = False
+			count = 0
 			# Handle ack
-			log("Receiving ACK Package in send()")
-			data, address = self.recvfrom(self.receivingWindowSize)
-			packet = self._reconstructPacket(bytearray(data))
-			if not packet:
-				log("Something wrong, send form base again")
-					
-			change = packet.header['ackNum'] - baseNum
-			baseNum = baseNum + change
-			log("ackNum received: " + str(packet.header['ackNum']))
-			log("chagnge: " + str(change))
-			while change:
-				if len(packetQueue) >= 1:
-					windowQueue.append(packetQueue.popleft())
-				if len(windowQueue) >= 1:
-					windowQueue.popleft()
-				change -= 1
-			log("windowQueue left: " + str(len(windowQueue)) + " packetQueue left: " + str(len(packetQueue)) + " self.seq: " + str(self.seqNum) + " self.ack: " + str(self.ackNum))
-		"""
-		while packetQueue and resetsLeft:
-			#send packets in send window
-			window = self.sendWindowSize
-			while window and packetQueue:
-
-				packetToSend = packetQueue.popleft()
-				#log("Sending message: " + str(packetToSend.data))
-				self.socket.sendto(packetToSend.toByteArray(), (self.destAddr, self.udpDestPort))
-				log("Sent a packet")
-				lastSeqNum = packetToSend.header['seqNum']
-
-				window -= 1
-				sentQueue.append(packetToSend)
-
-			try:
-				log("Waiting to receive ack Packet")
-				data, address = self.recvfrom(self.receivingWindowSize)
-				handShakeFinishedCheck = self._reconstructPacket(bytearray(data))
-				packet = self._reconstructPacket(bytearray(data),  lastSeqNum)
-				if not packet:
-					sentQueue.reverse()
-					packetQueue.extendleft(sentQueue)
-					sentQueue.clear()
-					resetsLeft -= 1
+			while True:
+				packet = None
+				try:
+					log("Receiving ACK Package in send()")
+					data, address = self.recvfrom(self.receivingWindowSize)
+					packet = self._reconstructPacket(bytearray(data), self.ackNum)
+				except:
+					log("Timed out while trying to receive ACK in send()")
+					count += 1
+					if count >= 3:
+						break
 					continue
+				if not packet:
+					log("Something wrong with ACK packet received")
+					#for pack in windowQueue:
+						#Send the packet
+					#	self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
+					#	log("Packet sent, seqNum: " + str(pack.header['seqNum']))
+					break
+				if packet:
+					log("Successfully received uncorrupted ACK Package")
+					correctlyReceivedAck = True
+					break
 
-			except socket.timeout:
-				window = 1
-				resetsLeft -= 1
-				sentQueue.reverse()
-				packetQueue.extendleft(sentQueue)
-				sentQueue.clear()
-
-			
-			else:
-				window += 1
-				if (isinstance(packet, int)):
-					while packet < 0:
-						packetQueue.appendleft(sentQueue.pop())
-						packet += 1
-				elif handShakeFinishedCheck.isAck():
-
-					flags = (False, False, True, False, False)
-					ackPacket = CRPPacket(
-								srcPort = self.udpSrcPort,
-								desPort = self.udpDestPort,
-								seqNum = self.seqNum,
-								ackNum = self.ackNum,
-								flagList = flags,
-								winSize = self.receivingWindowSize,
-								)
-					self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
-
-					resetsLeft = self.maxReset
-
-					sentQueue.reverse()
-					packetQueue.extendleft(sentQueue)
-					sentQueue.clear()
-				elif packet.isAck():
-					self.seqNum = packet.header['ackNum']
-					resetsLeft = self.maxReset
-					sentQueue.clear()
-			
-		if not resetsLeft:
-			raise Exception('socket timeout')
-		"""
+			if correctlyReceivedAck:
+				change = packet.header['ackNum'] - baseNum
+				baseNum = baseNum + change
+				log("ackNum received: " + str(packet.header['ackNum']))
+				log("chagnge: " + str(change))
+				while change:
+					if len(packetQueue) >= 1:
+						windowQueue.append(packetQueue.popleft())
+					if len(windowQueue) >= 1:
+						windowQueue.popleft()
+					change -= 1
+				log("windowQueue left: " + str(len(windowQueue)) + " packetQueue left: " + str(len(packetQueue)) + " self.seq: " + str(self.seqNum) + " self.ack: " + str(self.ackNum))
+		
 	# Returns the packet that was received in packet structure
 	def recv(self):
+		recieveOrder = ""
+		firstReceving = True
 		log("recv() entered")
 		if self.udpSrcPort is None:
 			log("Socket already closed")
@@ -291,38 +299,48 @@ class CRPSocket:
 		redoLeft = self.maxReset
 		isLast = False
 		while redoLeft and not isLast:
+			justSendAck = False
 			windowCount = self.sendWindowSize
 			log("Window Size: " + str(windowCount))
+			packet = None
 			while windowCount:
 				try:
 					log("==============Waiting to recieve a packet==============")
 					data, address = self.recvfrom(self.receivingWindowSize)
 				except socket.timeout:
-					log("Timed out")
+					log("Timed out, just send ACK")
 					redoLeft -= 1
-					continue
+					justSendAck = True
+					break
 				packetP = self._reconstructPacket(bytearray(data))
 				log("Recevied Packet SeqNum: " + str(packetP.header['seqNum']) + " ackNum: " + str(self.ackNum))
 				packet = self._reconstructPacket(bytearray(data), self.ackNum)
 
 				if not packet:
-					log("Receive out of order or irrelevant packet")
-					continue
+					log("*******************Receive out of order or irrelevant packet, ignore****************")
+					justSendAck = True
+					windowCount -= 1
+					break
 
-				message += packet.data
-				self.ackNum = packet.header['seqNum'] + 1
-				if self.ackNum > CRPPacket.maxAckNum():
-					self.ackNum = 0
+				if packet.data != None:
+					log("Recieved Packet, is First? " + str(firstReceving))
+					recieveOrder = recieveOrder + ", " + str(packet.header['seqNum'])
+					firstReceving = False
+					message += packet.data
+					self.ackNum = packet.header['seqNum'] + 1
+					if self.ackNum > CRPPacket.maxAckNum():
+						self.ackNum = 0
+					windowCount -= 1
 
 				if (packet.isLastPacket()):
 					log("Last Packet")
 					isLast = True
 					break
-				windowCount -= 1
 
 			#log("Data received: " + str(packet.data))
-			if packet.data != None:
-				
+			if (firstReceving == False and justSendAck == True) or packet != None and packet.data != None:
+				if justSendAck:
+					log("Send due to socket time out")
 				flags = (False, False, True, False, False)
 				ackPacket = CRPPacket(
 							srcPort = self.udpSrcPort,
@@ -335,69 +353,10 @@ class CRPSocket:
 				self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
 				log("Ack Packet sent: #" + str(self.ackNum))
 			log(" self.seq: " + str(self.seqNum) + " self.ack: " + str(self.ackNum))
-		"""
-		while redoLeft:
-			try:
-				log("Attempt to receive packet")
-				data, address = self.recvfrom(self.receivingWindowSize)
-				log("Packet received")
-			except socket.timeout:
-				redoLeft -= 1
-				continue
-
-			packet = self._reconstructPacket(bytearray(data))
-			log("packet reconstructed")
-			log("Flag List: " + str(packet.header['flagList']) + "\n")
-			log("Sequence Number " + str(packet.header['seqNum']))
-			if not packet:
-				redoLeft -= 1
-				continue
-			else:
-				self.ackNum = packet.header['seqNum'] + 1
-				if self.ackNum > CRPPacket.maxAckNum():
-					self.ackNum = 0
-
-				#log("Data received: " + str(packet.data))
-				if packet.data != None:
-					message += packet.data
-
-				flags = (False, False, True, False, False)
-				ackPacket = CRPPacket(
-							srcPort = self.udpSrcPort,
-							desPort = self.udpDestPort,
-							seqNum = self.seqNum,
-							ackNum = self.ackNum,
-							flagList = flags,
-							winSize = self.receivingWindowSize,
-							)
-				self.socket.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
-				log("Ack Packet sent")
-
-				if (packet.isLastPacket()):
-					log("Last Packet")
-					break
-
-				if (packet.isFin()):
-					log("Finish Packet received.")
-					flags = (False, True, False, False, False)
-					ackPacket = RxPacket(
-								srcPort = self.udpSrcPort,
-								desPort = self.udpDestPort,
-								seqNum = self.seqNum,
-								ackNum = self.ackNum,
-								flagList = flags,
-								winSize = self.receivingWindowSize,
-								)
-					self.sendto(ackPacket.toByteArray(), (self.destAddr, self.udpDestPort))
-					self.__closePassive(ackPacket)
-					break
-
-				#return message
-		return message
-		"""
 		if not redoLeft:
 			raise Exception('Socket timeout')
 
+		log("Order: " + recieveOrder)
 		return message
 		
 	def recvfrom(self, recvWindow):
@@ -409,9 +368,8 @@ class CRPSocket:
 				if error.errno is 35:
 					continue
 				else:
-					raise e
+					raise error
 			return packet
-		
 		
 		
 		
