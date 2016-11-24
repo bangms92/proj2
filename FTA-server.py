@@ -28,12 +28,7 @@ def usage():
 	print "Example: FTA-server 5000"
 	sys.exit(1)
 
-# def send_msg(socket, msg)
-# def recv_msg(socket)
-
 def send_msg(asocket, msg):
-	# Prefix each message with a 4-byte length (network byte order)
-	#msg = struct.pack('>I', len(msg)) + msg
 	asocket.send(msg)
 
 def recv_msg(asocket):
@@ -41,33 +36,17 @@ def recv_msg(asocket):
 	raw_msglen = recvall(asocket, 4)
 	if not raw_msglen:
 		return None
-	#msglen = struct.unpack('>I', raw_msglen)[0]
-	# Read the message data
-	#return recvall(asocket, msglen)
 	return raw_msglen
 
 def recvall(asocket, n):
-	log("Preparing to receive " + str(n) + " bytes...\n")
-
-	# Helper function to recv n bytes or return None if EOF is hit
-	data = ''
 	recvCallsMade = 0;
-	while len(data) < n:
-		log("message length is : " + str(n) + " | "+ "data length is : " + str(len(data)))
-		packet = asocket.recv()
-		if not packet:
-			return None
-		data += packet
-		recvCallsMade += 1
-	log("\n Calls to rcv() made: " + str(recvCallsMade) + "...\n")
-	print str(len(data)) + " bytes received.\n"
-	return data
+	packet = asocket.recv()
 
-# def recvall(socket, n)
-# def window(size)
-# def handleGet(filename)
-# def handlePut(filename)
-		
+	if not packet:
+		return None
+
+	return packet
+
 # Main  
 def runServer():
 	global sock
@@ -165,9 +144,6 @@ except Exception as e:
 	print "Error: could not bind to port " + str(serverCRPport) + " on local host.\n"
 	log("Exception: " + str(e))
 	sys.exit(1)
-count = 0;
+
 while True:
-	if (count < 10):
-		runServer()
-		count = count + 1
-		log("count: " + str(count))
+	runServer()

@@ -2,6 +2,7 @@ import socket
 import crpPacket
 from collections import deque
 from crpPacket import CRPPacket
+import math
 
 DEBUG = True
 
@@ -15,6 +16,7 @@ class CRPSocket:
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.socket.settimeout(1)
 		self.receivingWindowSize = CRPPacket.maxWindowSize()
+		self.recievingWindowSizeInt = 6
 		self.sendWindowSize = 6
 		
 		self.destAddr = None
@@ -28,7 +30,11 @@ class CRPSocket:
 		
 		self.state = 'CLOSED'
 
-		self.maxReset = 50
+		self.maxReset = 100
+
+	def setWindowSize(self, size):
+		self.receivingWindowSize = int(math.pow(2, size) - 1)
+		self.recievingWindowSizeInt = size
 		
 	def bind(self, addr, portNum):
 		self.socket.bind((addr, portNum))
@@ -194,18 +200,13 @@ class CRPSocket:
 		log("Queue size: " + str(len(dataQueue)))
 		count = 0
 		for data in dataQueue:
-		#    if data == dataQueue[0]:
-		#        flags = (False, False, False, False, True, False)
-		#    if data == dataQueue[-1]:
-		#        flags = (False, False, False, False, False, True)
-		#    else:
 			#log("Data in dataQueue: " + str(data))
 			count = count + 1
 			if data == dataQueue[-1]:
-				log("# " + str(count) + " Last Packet, 1:0:0:0:0 flag set")
+				#log("# " + str(count) + " Last Packet, 1:0:0:0:0 flag set")
 				flags = (True, False, False, False, False)
 			else:
-				log("# " + str(count) + " Normal Packet, 0:0:0:0:0 flag set")
+				#log("# " + str(count) + " Normal Packet, 0:0:0:0:0 flag set")
 				flags = (False, False, False, False, False)
 
 			packet = CRPPacket(
@@ -300,8 +301,8 @@ class CRPSocket:
 		isLast = False
 		while redoLeft and not isLast:
 			justSendAck = False
-			windowCount = self.sendWindowSize
-			log("Window Size: " + str(windowCount))
+			windowCount = self.receivingWindowSize
+			log("Receiving Window Size: " + str(windowCount))
 			packet = None
 			while windowCount:
 				try:

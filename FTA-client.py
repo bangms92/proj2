@@ -68,6 +68,13 @@ def post(filename):
         log("Complete Message received")
         if str(completeMessage) == "COMPLETE":
             log("File upload complete")
+
+def window(size):
+    global sock
+
+    sock.setWindowSize(size)
+    log("Window size set to " + str(size))
+
 def send_msg(asocket, msg):
     # Prefix each message with a 4-byte length (network byte order)
     #msg = struct.pack('>I', len(msg)) + msg
@@ -84,28 +91,13 @@ def recv_msg(asocket):
     return raw_msglen
 
 def recvall(asocket, n):
-    log("Preparing to receive " + str(n) + " bytes...\n")
-
-    # Helper function to recv n bytes or return None if EOF is hit
-    data = ''
     recvCallsMade = 0;
-    """
-    while len(data) < n:
-        log("message length is : " + str(n) + " | "+ "data length is : " + str(len(data)))
-        packet = asocket.recv()
-        if not packet:
-            return None
-        data += packet
-        recvCallsMade += 1
-    """
-
     packet = asocket.recv()
+
     if not packet:
         return None
-    data += packet
-    log("\n Calls to rcv() made: " + str(recvCallsMade) + "...\n")
-    print str(len(data)) + " bytes received.\n"
-    return data
+
+    return packet
 
 def connect():
     log("Client: Connect()\n")
@@ -142,6 +134,12 @@ def runClient():
                 post(splitInput[1])
         else:
             print("Invalid command")
+    elif splitInput[0] == 'window':
+        if len(splitInput) == 2:
+            if state == 'DISCONNECTED':
+                print ("You are not connected\n")
+            elif state == 'CONNECTED':
+                window(int(splitInput[1]))
 
 checkArgs()
 
