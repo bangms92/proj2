@@ -4,7 +4,8 @@ from collections import deque
 from crpPacket import CRPPacket
 import math
 
-DEBUG = False
+global DEBUG
+DEBUG = True
 
 def log(message):
 	if DEBUG:
@@ -15,7 +16,7 @@ def ilog(message):
 		print message
 
 class CRPSocket:
-	def __init__(self, sourceCRPPort):
+	def __init__(self, sourceCRPPort, flag):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.socket.settimeout(1)
@@ -35,6 +36,9 @@ class CRPSocket:
 		self.state = 'CLOSED'
 
 		self.maxReset = 100
+
+		global DEBUG
+		DEBUG = flag
 
 	def setWindowSize(self, size):
 		if size < 11:
@@ -112,7 +116,7 @@ class CRPSocket:
 				reqData, reqAddress = self.recvfrom(self.receivingWindowSize)
 				reqPacket = self._reconstructPacket(bytearray(reqData), self.ackNum)
 			except:
-				log("Most likely Timed out")
+				log("Socket Timed out")
 				continue
 			if reqPacket != None:
 				log("Received REQ")
@@ -138,7 +142,7 @@ class CRPSocket:
 				syncData, syncAddress = self.recvfrom(self.receivingWindowSize)
 				syncPacket = self._reconstructPacket(bytearray(syncData), self.ackNum)
 			except:
-				log("Most likely Timed out")
+				log("Socket Timed out")
 				timeoutCount += 1
 				if timeoutCount >= 3:
 					log("Send ACK again")
@@ -164,18 +168,18 @@ class CRPSocket:
 			givenChecksum = packet.header['checksum']
 			calculatedChecksum = packet._computeChecksum()
 
-			log("Given Check Sum: " + str(givenChecksum))
-			log("calculatedChecksum: " + str(calculatedChecksum))
+			#log("Given Check Sum: " + str(givenChecksum))
+			#log("calculatedChecksum: " + str(calculatedChecksum))
 
 			if givenChecksum != calculatedChecksum:
-				log("#### corrupted packet ####")
+				log("#### Corrupted Packet ####")
 				return None
 
 			packetAckNum = packet.header['seqNum']
-			log("Comparing seqNum: " + str(packetAckNum) + " with " + str(checkAckNum))
+			#log("Comparing seqNum: " + str(packetAckNum) + " with " + str(checkAckNum))
 
 			if packetAckNum != checkAckNum:
-				log("#### ack mismatch ####")
+				log("#### Ack Mismatch ####")
 				return None
 		return packet
 
@@ -209,10 +213,10 @@ class CRPSocket:
 
 		#construct packet queue from data queue
 		log("Queue size: " + str(len(dataQueue)))
-		count = 0
+		totalcount = 0
 		for data in dataQueue:
 			#log("Data in dataQueue: " + str(data))
-			count = count + 1
+			totalcount = totalcount + 1
 			if data == dataQueue[-1]:
 				#log("# " + str(count) + " Last Packet, 1:0:0:0:0 flag set")
 				flags = (True, False, False, False, False)
@@ -252,7 +256,7 @@ class CRPSocket:
 			for pack in windowQueue:
 				#Send the packet
 				self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
-				log("Packet sent, seqNum: " + str(pack.header['seqNum']))
+				ilog("Packet sent, seqNum: " + str(pack.header['seqNum']))
 				sentQueue.append(pack)
 				nextSeqNum = self.seqNum + 1
 
@@ -262,24 +266,24 @@ class CRPSocket:
 			while True:
 				packet = None
 				try:
-					log("Receiving ACK Package in send()")
+					ilog("Receiving ACK Package in send()")
 					data, address = self.recvfrom(self.receivingWindowSize)
 					packet = self._reconstructPacket(bytearray(data), self.ackNum)
 				except:
-					log("Timed out while trying to receive ACK in send()")
+					ilog("Timed out while trying to receive ACK in send()")
 					count += 1
 					if count >= 3:
 						break
 					continue
 				if packet == None:
-					log("Something wrong with ACK packet received")
+					ilog("Ack was either corrupted or Out of order")
 					#for pack in windowQueue:
 						#Send the packet
 					#	self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
 					#	log("Packet sent, seqNum: " + str(pack.header['seqNum']))
 					break
 				if packet:
-					log("Successfully received uncorrupted ACK Package")
+					ilog("Successfully received uncorrupted ACK Package")
 					correctlyReceivedAck = True
 					break
 
@@ -295,7 +299,7 @@ class CRPSocket:
 						windowQueue.popleft()
 					change -= 1
 				log("windowQueue left: " + str(len(windowQueue)) + " packetQueue left: " + str(len(packetQueue)) + " self.seq: " + str(self.seqNum) + " self.ack: " + str(self.ackNum))
-				ilog("S")
+				ilog("" + str(100 * (totalcount - len(packetQueue))/float(totalcount)) + "'%' Sent")
 	# Returns the packet that was received in packet structure
 	def recv(self):
 		recieveOrder = ""
@@ -383,7 +387,7 @@ class CRPSocket:
 		if not redoLeft:
 			raise Exception('Socket timeout')
 
-		log("Order: " + recieveOrder)
+		#log("Order: " + recieveOrder)
 		return message
 		
 	def recvfrom(self, recvWindow):

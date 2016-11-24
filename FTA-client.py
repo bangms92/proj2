@@ -10,7 +10,9 @@ def log(message):
         print message
 
 def checkArgs():
-    if len(sys.argv) != 3:
+    if len(sys.argv) == 3 or len(sys.argv) == 4 :
+        print "Valid arguments"
+    else:
         print "Invalid arguments"
         sys.exit(1)
 
@@ -158,9 +160,15 @@ checkArgs()
 clientCRPPort = 7001
 ftaServerIP = sys.argv[1]
 ftaServerPort = int(sys.argv[2])
+debugFlag = False
+
+if len(sys.argv) == 4:
+    if sys.argv[3] != None:
+        log("Flag set to True")
+        debugFlag = True
 
 #Create Client socket
-sock = crpSocket.CRPSocket(clientCRPPort)
+sock = crpSocket.CRPSocket(clientCRPPort, debugFlag)
 state = 'DISCONNECTED'
 
 try:

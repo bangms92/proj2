@@ -12,13 +12,13 @@ import os
 
 # FTA-server X
 # X: The port number at which the FTA-server's UDP socket should bind
+
 def checkArgs():
-	if len(sys.argv) != 2:
-		usage()
-	try:
-		int(sys.argv[1])
-	except:
-		usage()
+	if len(sys.argv) == 2 or len(sys.argv) == 3 :
+		print "Valid arguments"
+	else:
+		print "Invalid arguments"
+		sys.exit(1)
 
 def usage():
 	print "Invalid arguments\n"
@@ -134,8 +134,14 @@ def handleGet(filename):
 checkArgs()
 
 serverCRPport = int(sys.argv[1])
+debugFlag = False
 
-sock = crpSocket.CRPSocket(serverCRPport)
+if len(sys.argv) == 3:
+	if sys.argv[2] != None:
+		log("Flag set to True")
+		debugFlag = True
+
+sock = crpSocket.CRPSocket(serverCRPport, debugFlag)
 state = 'DISCONNECTED'
 
 try:
