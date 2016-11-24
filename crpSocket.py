@@ -4,10 +4,14 @@ from collections import deque
 from crpPacket import CRPPacket
 import math
 
-DEBUG = True
+DEBUG = False
 
 def log(message):
 	if DEBUG:
+		print message
+
+def ilog(message):
+	if True:
 		print message
 
 class CRPSocket:
@@ -33,8 +37,15 @@ class CRPSocket:
 		self.maxReset = 100
 
 	def setWindowSize(self, size):
-		self.receivingWindowSize = int(math.pow(2, size) - 1)
-		self.recievingWindowSizeInt = size
+		if size < 11:
+			self.receivingWindowSize = int(math.pow(2, 12) - 1)
+			self.recievingWindowSizeInt = 12
+		elif size > 31:
+			self.receivingWindowSize = int(math.pow(2, 31) - 1)
+			self.recievingWindowSizeInt = 31
+		else:
+			self.receivingWindowSize = int(math.pow(2, size) - 1)
+			self.recievingWindowSizeInt = size
 		
 	def bind(self, addr, portNum):
 		self.socket.bind((addr, portNum))
@@ -45,8 +56,6 @@ class CRPSocket:
 		self.udpDestPort = portNum
 		
 		#Send REQ
-
-
 		log("Creating REQ Packet")
 		reqPacket = CRPPacket.getREQ(self.udpSrcPort, self.udpDestPort, self.seqNum, self.ackNum, self.receivingWindowSize)
 		
@@ -80,7 +89,7 @@ class CRPSocket:
 			
 		log("self.seqNum is " + str(self.seqNum))
 		if ackPacket.isAck() and ackPacket.header['ackNum'] == self.seqNum:
-			print "Correct Ack recieved"
+			log("Correct Ack recieved")
 			
 		#Send SYNC
 		log("Creating SYNC Packet")
@@ -262,12 +271,12 @@ class CRPSocket:
 					if count >= 3:
 						break
 					continue
-				if not packet:
+				if packet == None:
 					log("Something wrong with ACK packet received")
 					#for pack in windowQueue:
 						#Send the packet
-					#   self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
-					#   log("Packet sent, seqNum: " + str(pack.header['seqNum']))
+					#	self.socket.sendto(pack.toByteArray(), (self.destAddr, self.udpDestPort))
+					#	log("Packet sent, seqNum: " + str(pack.header['seqNum']))
 					break
 				if packet:
 					log("Successfully received uncorrupted ACK Package")
@@ -286,7 +295,7 @@ class CRPSocket:
 						windowQueue.popleft()
 					change -= 1
 				log("windowQueue left: " + str(len(windowQueue)) + " packetQueue left: " + str(len(packetQueue)) + " self.seq: " + str(self.seqNum) + " self.ack: " + str(self.ackNum))
-		
+				ilog("S")
 	# Returns the packet that was received in packet structure
 	def recv(self):
 		recieveOrder = ""
@@ -303,7 +312,7 @@ class CRPSocket:
 		isLast = False
 		while redoLeft and not isLast:
 			justSendAck = False
-			windowCount = self.receivingWindowSize
+			windowCount = self.recievingWindowSizeInt
 			log("Receiving Window Size: " + str(windowCount))
 			packet = None
 			while windowCount:
@@ -315,6 +324,7 @@ class CRPSocket:
 					redoLeft -= 1
 					justSendAck = True
 					break
+
 				packetP = self._reconstructPacket(bytearray(data))
 				log("Recevied Packet SeqNum: " + str(packetP.header['seqNum']) + " ackNum: " + str(self.ackNum))
 				packet = self._reconstructPacket(bytearray(data), self.ackNum)
@@ -420,7 +430,13 @@ class CRPSocket:
 				break;
 		self.socket.close()
 		self.state = 'CLOSED'
-	
+		
+		
+		
+		
+		
+		
+		
 		
 		
 		

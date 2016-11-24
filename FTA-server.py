@@ -55,7 +55,7 @@ def runServer():
 	log("Top of the server, state: " + state)
 	if (state != "CONNECTED"):
 		try:
-			log("Attempting to listen\n")
+			log("Listening...")
 			try:
 				sock.listen()
 			except Exception as e:
@@ -85,7 +85,7 @@ def runServer():
 		if command == 'POST':
 			log("POST request received")
 			handlePost(filename)
-		if command == 'terminate'
+		if command == 'terminate':
 			log("Exiting, Thank you!")
 			sys.exit(0)
 
@@ -94,7 +94,7 @@ def handlePost(filename):
 	send_msg(sock, "ACCEPTED")
 	log("Accepted message sent")
 
-	receivedFilePacket = recv_msg(sock)
+	recievedFilePacket = recv_msg(sock)
 	log("Received uploading file")
 	send_msg(sock, "COMPLETE")
 	log("Complete message sent")
@@ -102,13 +102,10 @@ def handlePost(filename):
 	try:	
 		with file(newFileName, "wb") as afile:
 		# File is open. Send as bytestream.
-			afile.write(receivedFilePacket)
+			afile.write(recievedFilePacket)
 	except IOError as e:
-		# File doe snot exist. Send error message.
-		eMessage = "ERROR : File does not exist."
-		log("Exception: " + str(e) + "...\n")
-		log("Sending error message to cleint...\n")
-		send_msg(sock, bytearray(eMessage))
+		# File doe snot exist.
+		log("ERROR : File failed to be created.")
 
 
 def handleGet(filename):
@@ -129,7 +126,7 @@ def handleGet(filename):
 		eMessage = "ERROR : File does not exist."
 		log("Exception: " + str(e) + "...\n")
 		log("Sending error message to cleint...\n")
-		send_msg(sock, bytearray(eMessage))
+		send_msg(sock, eMessage)
 
 
 # ------------------Program Run-------------------- #

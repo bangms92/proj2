@@ -23,46 +23,40 @@ def get(filename):
 
     receivedFile = recv_msg(sock)
 
-    if receivedFile != None:
-        log("Recevied File contet: " + str(receivedFile))
-    ##
-    newFileName = 'received file ' + filename
+    newFileName = 'Received File ' + filename
     try:
         with file(newFileName, "wb") as afile:
         # File is open. Send as bytestream.
             afile.write(receivedFile)
     except IOError as e:
         # File doe snot exist. Send error message.
-        eMessage = "ERROR : File does not exist."
-        log("Exception: " + str(e) + "...\n")
-        log("Sending error message to cleint...\n")
-        send_msg(sock, bytearray(eMessage))
-    ##
+        log("ERROR : File does not exist.")
 
 def post(filename):
     postRequest = 'POST ' + filename
 
+    try:
+        log("Attempting to open file " + filename + "...\n")
+        with open(filename, "rb") as afile:
+     # File is open. Send as bytestream.
+            log("File opened - now attempting to read it in.\n")
+            toSend = afile.read()
+            bytesToSend = bytearray(toSend)
+            log("File imported as byteArray...\n")
+    except IOError as e:
+        # File does not exist. Send error message.
+        eMessage = "ERROR : File does not exist."
+        log("The file does not exist")
+        return
+
     send_msg(sock, postRequest)
     log("POST request sent")
     response = recv_msg(sock)
-    if (str(response) == "ACCEPTED"):
+    if str(response) == "ACCEPTED":
         log("Received accepted message. Sending file")
-        try:
-            log("Attempting to open file " + filename + "...\n")
-            with open(filename, "rb") as afile:
-            # File is open. Send as bytestream.
-                log("File opened - now attempting to read it in.\n")
-                toSend = afile.read()
-                bytesToSend = bytearray(toSend)
-                log("File imported as byteArray...\n")
-                log("Sending file to server...\n")
-                send_msg(sock, bytesToSend)
-                print "File sent!"
-        except IOError as e:
-            # File does not exist. Send error message.
-            eMessage = "ERROR : File does not exist."
-            log("Exception: " + str(e) + "...\n")
-
+        log("Sending file to server...\n")
+        send_msg(sock, bytesToSend)
+        log("File Sent!")
         # Make sure server got the file
         completeMessage = recv_msg(sock)
         log("Complete Message received")
@@ -76,8 +70,6 @@ def window(size):
     log("Window size set to " + str(size))
 
 def send_msg(asocket, msg):
-    # Prefix each message with a 4-byte length (network byte order)
-    #msg = struct.pack('>I', len(msg)) + msg
     asocket.send(msg)
 
 def recv_msg(asocket):
@@ -86,7 +78,6 @@ def recv_msg(asocket):
     raw_msglen = recvall(asocket, 4)
     if not raw_msglen:
         return None
-    #msglen = struct.unpack('>I', raw_msglen)[0]
     # Read the message data
     return raw_msglen
 
@@ -98,19 +89,6 @@ def recvall(asocket, n):
         return None
 
     return packet
-
-def connect():
-    log("Client: Connect()\n")
-    global sock
-    global state
-        
-    if state != 'DISCONNECTED':
-        print "Already Connected"
-        log("sending message...")
-        #send_msg(sock, "test")
-    else:
-        sock.connect(ftaServerIP, ftaServerPort)
-        state = 'CONNECTED'
 
 def disconnect():
     global sock
@@ -127,6 +105,18 @@ def disconnect():
             print "Terminating...Thank you"
             sys.exit(0)
 
+def connect():
+    global sock
+    global state
+        
+    if state != 'DISCONNECTED':
+        print "Already Connected"
+    else:
+        log("Connecting...")
+        sock.connect(ftaServerIP, ftaServerPort)
+        state = 'CONNECTED'
+        log("Connected!")
+        
 def runClient():
     userInput = raw_input('\n\nEnter a command:\n')
     splitInput = userInput.split(' ', 1)
