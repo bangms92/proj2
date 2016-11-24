@@ -1,6 +1,7 @@
 Thomas Lee tlee319@gatech.edu
+Minsik Bang mbang3@gatech.edu
 
-CS3251 - A - 11/26/2016 - Sockets Programming Assignment 2
+CS3251 - A - 11/23/2016 - Sockets Programming Assignment 2
 ===============================================================================
 crpPacket.py	| Packet Class
 crpSocket.py	| Socket Class
@@ -14,7 +15,13 @@ SmallPic.jpg 	| Small picture file to transfer
 ===============================================================================
 Instruction
 
-1) Call python FTA-server.py 5000 in the docker image with IP address 172.17.0.3
-2) Call python FTA-client.py 172.17.0.3 5000 in the docker image with IP address 172.17.0.2
+1) Call ‘python FTA-server.py 5000’ in the docker image with IP address 172.17.0.3
+2) Call ‘python FTA-client.py 172.17.0.3 5000’ in the docker image with IP address 172.17.0.2
 3) If neither IP addresses can be used, open FTA-server.py and change line 142 to the correct IP address, and open FTA-client.py and change line 159 to the correct IP address.
-4) On the client, type in 'connect'
+4) On the client, type in 'connect’ to initiate connection: state changes from DISCONNECTED to CONNECTED.
+5) 
+
+
+Limitations of our design
+- It only supports IPv4.
+- 
